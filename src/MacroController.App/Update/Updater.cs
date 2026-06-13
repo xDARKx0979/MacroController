@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace MacroController.App.Update;
 
@@ -18,8 +19,8 @@ internal static class Updater
 {
     // Bump these together with each release. VersionString must match the
     // AppVersion baked into the installer (see build/installer.iss).
-    public const int Version = 1;
-    public const string VersionString = "1.0.0";
+    public const int Version = 2;
+    public const string VersionString = "1.0.1";
 
     // ── GitHub private-repo config ──────────────────────────────────────────
     // Repo: https://github.com/xDARKx0979/MacroController (private)
@@ -161,7 +162,15 @@ internal static class Updater
 
 internal sealed class Manifest
 {
+    // Explicit names so deserialization still maps correctly after Obfuscar
+    // renames these properties (Manifest is internal, so KeepPublicApi doesn't
+    // protect it).
+    [JsonPropertyName("Version")]
     public int Version { get; set; }
+
+    [JsonPropertyName("DownloadUrl")]
     public string DownloadUrl { get; set; } = "";
+
+    [JsonPropertyName("Sha256")]
     public string? Sha256 { get; set; }
 }
