@@ -1,7 +1,6 @@
 using System.Globalization;
 using MacroController.Core.Input;
 using MacroController.Core.Macros;
-using MacroController.Core.Native;
 
 namespace MacroController.Core.Importers;
 
@@ -51,14 +50,15 @@ internal static class RazerMacroEventConverter
                         break;
                     }
 
-                    int vkCode = ScanCodeToVirtualKey(makecode);
-                    if (vkCode == 0)
+                    // Despite the name, Synapse records this as a Windows virtual-key code
+                    // (e.g. 53 = VK_5 = "5", 32 = VK_SPACE = "Space"), not a PS/2 scan code.
+                    if (makecode is <= 0 or > 0xFF)
                     {
-                        problems.Add($"Unrecognized key (scan code {makecode})");
+                        problems.Add($"Unrecognized key (code {makecode})");
                         break;
                     }
 
-                    steps.Add(new InputEvent(InputDevice.Keyboard, vkCode, keyState == 0 ? ActionType.KeyDown : ActionType.KeyUp, 0));
+                    steps.Add(new InputEvent(InputDevice.Keyboard, makecode, keyState == 0 ? ActionType.KeyDown : ActionType.KeyUp, 0));
                     break;
 
                 case "2":
@@ -84,15 +84,5 @@ internal static class RazerMacroEventConverter
         }
 
         return (steps, problems);
-    }
-
-    /// <summary>Converts a PS/2 Set-1 "make code" (as recorded by Synapse) to a Win32 virtual-key code.</summary>
-    public static int ScanCodeToVirtualKey(int makecode)
-    {
-        uint vk = NativeMethods.MapVirtualKey((uint)makecode, NativeMethods.MAPVK_VSC_TO_VK);
-        if (vk == 0 && makecode is >= 0 and <= 0xFF)
-            vk = NativeMethods.MapVirtualKey((uint)(0xE000 | makecode), NativeMethods.MAPVK_VSC_TO_VK_EX);
-
-        return (int)vk;
     }
 }
