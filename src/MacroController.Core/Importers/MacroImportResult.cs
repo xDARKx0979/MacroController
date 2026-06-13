@@ -30,4 +30,10 @@ public sealed class MacroImportResult
 
     /// <summary>The converted macro, present only when <see cref="Status"/> is <see cref="MacroImportStatus.Imported"/>.</summary>
     public Macro? Macro { get; init; }
+
+    /// <summary>
+    /// Stable identifier (e.g. a GUID) for the source macro, used to de-duplicate the same
+    /// macro found across multiple source files. Null when the format has no such identifier.
+    /// </summary>
+    public string? SourceId { get; init; }
 }

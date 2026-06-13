@@ -17,6 +17,7 @@ public static class VendorMacroScanner
     private static readonly IVendorMacroImporter[] ScanImporters =
     [
         new RazerSynapseMacroImporter(),
+        new RazerSynapse4MacroImporter(),
     ];
 
     /// <summary>File filter string for "Open" dialogs covering every format we can import.</summary>
@@ -38,6 +39,11 @@ public static class VendorMacroScanner
     {
         var results = new List<MacroImportResult>();
 
+        // Some sources (e.g. Synapse 4's LevelDB caches) store the same macro in multiple
+        // files; SourceId carries a stable identifier (e.g. a GUID) so duplicates are only
+        // imported/reported once.
+        var seenIds = new HashSet<string>();
+
         foreach (string file in DiscoverCandidateFiles())
         {
             var importer = ScanImporters.FirstOrDefault(i => i.CanParse(file));
@@ -46,6 +52,9 @@ public static class VendorMacroScanner
 
             foreach (var result in importer.Parse(file))
             {
+                if (result.SourceId is not null && !seenIds.Add(result.SourceId))
+                    continue;
+
                 if (result.Status == MacroImportStatus.Imported && result.Macro is not null)
                     MacroLibraryStore.ImportConverted(result.Macro);
 
@@ -56,7 +65,7 @@ public static class VendorMacroScanner
         return results;
     }
 
-    /// <summary>Finds candidate macro XML files under every known Razer macro storage location.</summary>
+    /// <summary>Finds candidate macro files under every known Razer macro storage location.</summary>
     public static List<string> DiscoverCandidateFiles()
     {
         var files = new List<string>();
@@ -66,6 +75,20 @@ public static class VendorMacroScanner
             try
             {
                 files.AddRange(Directory.EnumerateFiles(dir, "*.xml", SearchOption.AllDirectories));
+            }
+            catch
+            {
+                // Inaccessible or vanished mid-scan - skip.
+            }
+        }
+
+        // Razer Synapse 4 caches its synced macro data as Chromium LevelDB files.
+        foreach (string dir in GetSynapse4LeveldbDirectories())
+        {
+            try
+            {
+                files.AddRange(Directory.EnumerateFiles(dir, "*.log"));
+                files.AddRange(Directory.EnumerateFiles(dir, "*.ldb"));
             }
             catch
             {
@@ -110,6 +133,29 @@ public static class VendorMacroScanner
         // Razer Synapse 2 (legacy).
         AddIfExists(Path.Combine(appData, "Razer", "Synapse", "Macros"));
         AddIfExists(Path.Combine(localAppData, "Razer", "Synapse", "Macros"));
+
+        return dirs;
+    }
+
+    /// <summary>
+    /// Razer Synapse 4 ("RazerAppEngine") is an Electron app that syncs macros via
+    /// remotestorage.io and caches them locally as Chromium LevelDB files.
+    /// </summary>
+    private static List<string> GetSynapse4LeveldbDirectories()
+    {
+        string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string defaultProfile = Path.Combine(localAppData, "Razer", "RazerAppEngine", "User Data", "Default");
+
+        var dirs = new List<string>();
+
+        void AddIfExists(string path)
+        {
+            if (Directory.Exists(path))
+                dirs.Add(path);
+        }
+
+        AddIfExists(Path.Combine(defaultProfile, "IndexedDB", "https_apps.razer.com_0.indexeddb.leveldb"));
+        AddIfExists(Path.Combine(defaultProfile, "Local Storage", "leveldb"));
 
         return dirs;
     }
