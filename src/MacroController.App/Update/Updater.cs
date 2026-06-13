@@ -19,8 +19,8 @@ internal static class Updater
 {
     // Bump these together with each release. VersionString must match the
     // AppVersion baked into the installer (see build/installer.iss).
-    public const int Version = 8;
-    public const string VersionString = "1.0.7";
+    public const int Version = 9;
+    public const string VersionString = "1.0.8";
 
     // ── GitHub private-repo config ──────────────────────────────────────────
     // Repo: https://github.com/xDARKx0979/MacroController (private)
