@@ -72,10 +72,13 @@ public partial class MainWindow : Window
         {
             // The patcher has its own window and takes over from here, so close
             // ours immediately rather than leaving two overlapping status popups.
+            // Force a full shutdown (not just MainWindow.Close()) so the process
+            // actually exits - otherwise the patcher's "wait for app to close"
+            // times out, its file copies fail (still locked), and it relaunches
+            // the same unpatched exe, which repeats the whole cycle.
             progressWindow.Close();
-
             _isExiting = true;
-            Close();
+            Application.Current.Shutdown();
         }
         else
         {
@@ -126,7 +129,7 @@ public partial class MainWindow : Window
     private void ExitApplication()
     {
         _isExiting = true;
-        Close();
+        Application.Current.Shutdown();
     }
 
     private void StartWithWindowsCheckBox_Changed(object sender, RoutedEventArgs e)

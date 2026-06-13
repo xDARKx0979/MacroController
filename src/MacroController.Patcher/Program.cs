@@ -59,6 +59,14 @@ internal static class Program
             Thread.Sleep(300);
         }
 
+        // If it's still running after the timeout, a lingering window or hung
+        // shutdown could keep the exe locked forever, causing the file copies
+        // below to fail and the relaunch to repeat this whole cycle. Force it.
+        foreach (var process in Process.GetProcessesByName("MacroController.App"))
+        {
+            try { process.Kill(); process.WaitForExit(5000); } catch { }
+        }
+
         SetStatus("Installing update...");
         if (Directory.Exists(tempDir))
         {
