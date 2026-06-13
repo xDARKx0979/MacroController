@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Add Step" Height="480" Width="640"
-        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
+        Icon="Assets/icon.ico">
     <Grid Margin="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -84,7 +85,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Key / Button:" Width="160" VerticalAlignment="Center"/>
                         <TextBlock x:Name="KeyCapturedText" Text="(none)" Width="140" VerticalAlignment="Center"/>
-                        <Button x:Name="KeyCaptureButton" Content="Capture..." Click="KeyCaptureButton_Click" Padding="8,2"/>
+                        <Button x:Name="KeyCaptureButton" Content="Capture" Click="KeyCaptureButton_Click" Padding="8,2"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Hold (ms):" Width="160" VerticalAlignment="Center"/>
@@ -106,7 +107,7 @@
                     <StackPanel x:Name="MouseCapturePanel" Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Mouse Button:" Width="160" VerticalAlignment="Center"/>
                         <TextBlock x:Name="MouseCapturedText" Text="(none)" Width="140" VerticalAlignment="Center"/>
-                        <Button x:Name="MouseCaptureButton" Content="Capture..." Click="MouseCaptureButton_Click" Padding="8,2"/>
+                        <Button x:Name="MouseCaptureButton" Content="Capture" Click="MouseCaptureButton_Click" Padding="8,2"/>
                     </StackPanel>
 
                     <StackPanel x:Name="MouseHoldPanel" Orientation="Horizontal" Margin="0,0,0,10">
@@ -150,7 +151,7 @@
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                         <TextBlock Text="Path:" Width="160" VerticalAlignment="Center"/>
                         <TextBox x:Name="LaunchPathInput" Width="280" Margin="0,0,8,0"/>
-                        <Button Content="Browse..." Click="LaunchBrowseButton_Click" Padding="8,2"/>
+                        <Button Content="Browse" Click="LaunchBrowseButton_Click" Padding="8,2"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Arguments:" Width="160" VerticalAlignment="Center"/>

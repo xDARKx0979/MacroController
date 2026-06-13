@@ -67,6 +67,14 @@ internal static class Program
             try { process.Kill(); process.WaitForExit(5000); } catch { }
         }
 
+        // Leftovers from a previous update that renamed this patcher's own
+        // files out of the way (see below). Safe to delete now - if we got
+        // this far, nothing still has them open.
+        foreach (var oldFile in Directory.GetFiles(exeDir, "*.old", SearchOption.TopDirectoryOnly))
+        {
+            try { File.Delete(oldFile); } catch { }
+        }
+
         SetStatus("Installing update...");
         if (Directory.Exists(tempDir))
         {
@@ -93,7 +101,23 @@ internal static class Program
                     catch
                     {
                         if (attempt == 4)
-                            break; // skip files that can't be replaced (e.g. this patcher's own exe)
+                        {
+                            // Can't overwrite directly - likely this patcher's own
+                            // running exe/dll. Windows allows renaming a running
+                            // exe's file (FILE_SHARE_DELETE), so move it aside and
+                            // copy the new one into its place; the orphaned ".old"
+                            // file is cleaned up on the next update.
+                            try
+                            {
+                                var oldPath = destination + ".old";
+                                if (File.Exists(oldPath))
+                                    File.Delete(oldPath);
+                                File.Move(destination, oldPath);
+                                File.Copy(source, destination, overwrite: false);
+                            }
+                            catch { /* give up on this file for this cycle */ }
+                            break;
+                        }
 
                         Thread.Sleep(500);
                     }

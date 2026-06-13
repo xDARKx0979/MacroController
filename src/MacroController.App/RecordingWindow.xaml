@@ -6,7 +6,8 @@
         mc:Ignorable="d"
         Title="Recording Macro" Height="480" Width="380"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize"
-        Topmost="True" ShowInTaskbar="False">
+        Topmost="True" ShowInTaskbar="False"
+        Icon="Assets/icon.ico">
     <Grid Margin="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

@@ -1,14 +1,13 @@
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
-using System.Windows.Threading;
 using MacroController.Core.Bindings;
 using MacroController.Core.Hooks;
 using MacroController.Core.Input;
 using MacroController.Core.Macros;
-using MacroController.Core.Profiles;
 using MacroController.Core.Storage;
 using MacroController.App.Update;
+using Microsoft.Win32;
 using Forms = System.Windows.Forms;
 using Trigger = MacroController.Core.Bindings.Trigger;
 
@@ -16,37 +15,24 @@ namespace MacroController.App;
 
 public partial class MainWindow : Window
 {
-    private const string ProfilesFilePath = "profiles.json";
-
     private readonly KeyboardHook _keyboardHook = new();
     private readonly MouseHook _mouseHook = new();
     private readonly MacroRecorder _recorder = new();
     private readonly BindingManager _bindingManager = new();
-    private readonly ProfileManager _profileManager;
-    private readonly DispatcherTimer _profileTimer;
     private Forms.NotifyIcon? _trayIcon;
     private bool _isExiting;
-    private bool _suppressStartupEvent;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        _profileManager = new ProfileManager(_bindingManager, LoadProfiles(), LoadMacroShortcutBindings());
-        _profileManager.ActiveProfileChanged += (_, profile) => ActiveProfileText.Text = profile.Name;
-        ActiveProfileText.Text = _profileManager.ActiveProfile.Name;
+        StartupManager.SetEnabled(true);
 
-        _suppressStartupEvent = true;
-        StartWithWindowsCheckBox.IsChecked = StartupManager.IsEnabled();
-        _suppressStartupEvent = false;
+        _bindingManager.SetBindings(LoadMacroShortcutBindings());
+        RefreshList();
 
         WireHooks();
         InitializeTrayIcon();
-
-        // Polling interval per PLAN.md's suggested 250-500ms range for foreground-app checks.
-        _profileTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
-        _profileTimer.Tick += (_, _) => _profileManager.Poll();
-        _profileTimer.Start();
 
         _keyboardHook.Install();
         _mouseHook.Install();
@@ -90,7 +76,6 @@ public partial class MainWindow : Window
     {
         var contextMenu = new Forms.ContextMenuStrip();
         contextMenu.Items.Add("Show", null, (_, _) => ShowFromTray());
-        contextMenu.Items.Add("Reload Profiles", null, (_, _) => ReloadProfiles());
         contextMenu.Items.Add(new Forms.ToolStripSeparator());
         contextMenu.Items.Add("Exit", null, (_, _) => ExitApplication());
 
@@ -111,12 +96,6 @@ public partial class MainWindow : Window
         Activate();
     }
 
-    private void ReloadProfiles()
-    {
-        _profileManager.ReplaceProfiles(LoadProfiles());
-        _profileManager.SetGlobalBindings(LoadMacroShortcutBindings());
-    }
-
     /// <summary>Builds global bindings from every saved macro that has a <see cref="Macro.Shortcut"/> assigned.</summary>
     private static List<Binding> LoadMacroShortcutBindings()
     {
@@ -130,14 +109,6 @@ public partial class MainWindow : Window
     {
         _isExiting = true;
         Application.Current.Shutdown();
-    }
-
-    private void StartWithWindowsCheckBox_Changed(object sender, RoutedEventArgs e)
-    {
-        if (_suppressStartupEvent)
-            return;
-
-        StartupManager.SetEnabled(StartWithWindowsCheckBox.IsChecked == true);
     }
 
     protected override void OnClosing(CancelEventArgs e)
@@ -154,15 +125,11 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        _profileTimer.Stop();
         _keyboardHook.Dispose();
         _mouseHook.Dispose();
         _trayIcon?.Dispose();
         base.OnClosed(e);
     }
-
-    /// <summary>Loads profiles.json if present, otherwise falls back to a single empty "Default" profile.</summary>
-    private List<Profile> LoadProfiles() => File.Exists(ProfilesFilePath) ? ProfileStore.Load(ProfilesFilePath) : new List<Profile> { new() };
 
     private void WireHooks()
     {
@@ -213,19 +180,101 @@ public partial class MainWindow : Window
         _mouseHook.MouseWheel += (_, e) => _recorder.RecordWheel(e.Delta, e.Horizontal);
     }
 
-    private void ProfilesButton_Click(object sender, RoutedEventArgs e)
+    private void RefreshList()
     {
-        var dialog = new ProfilesWindow(_profileManager.Profiles) { Owner = this };
-        if (dialog.ShowDialog() != true)
+        MacroList.ItemsSource = MacroLibraryStore.LoadAll()
+            .Select(entry => new MacroListItem(entry.FilePath, entry.Macro.Name, entry.Macro.Steps.Count))
+            .ToList();
+    }
+
+    private void NewMacroButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new InputDialog("Make Macro", "Macro name:", "New Macro") { Owner = this };
+        if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.Value))
             return;
 
-        _profileManager.ReplaceProfiles(dialog.Profiles);
+        string path = MacroLibraryStore.CreateNew(dialog.Value.Trim());
+        OpenEditor(path);
     }
 
-    private void MacrosButton_Click(object sender, RoutedEventArgs e)
+    private void EditButton_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new MacrosWindow(_recorder) { Owner = this };
-        dialog.ShowDialog();
-        _profileManager.SetGlobalBindings(LoadMacroShortcutBindings());
+        if (((FrameworkElement)sender).Tag is MacroListItem item)
+            OpenEditor(item.FilePath);
     }
+
+    private void OpenEditor(string path)
+    {
+        var macro = MacroStore.Load(path);
+        var editor = new MacroEditorWindow(macro, path, _recorder) { Owner = this };
+        editor.ShowDialog();
+        RefreshList();
+        _bindingManager.SetBindings(LoadMacroShortcutBindings());
+    }
+
+    private void DeleteButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is not MacroListItem item)
+            return;
+
+        var result = MessageBox.Show(this, $"Delete macro '{item.Name}'?", "Delete Macro",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        File.Delete(item.FilePath);
+        RefreshList();
+        _bindingManager.SetBindings(LoadMacroShortcutBindings());
+    }
+
+    private void DuplicateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is not MacroListItem item)
+            return;
+
+        MacroLibraryStore.Duplicate(item.FilePath);
+        RefreshList();
+    }
+
+    private void ExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is not MacroListItem item)
+            return;
+
+        string safeName = string.Concat(item.Name.Split(Path.GetInvalidFileNameChars()));
+        var dialog = new SaveFileDialog
+        {
+            Filter = "Macro files (*.json)|*.json|All files (*.*)|*.*",
+            FileName = $"{safeName}.json",
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        MacroLibraryStore.Export(item.FilePath, dialog.FileName);
+    }
+
+    private void ImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Filter = "Macro files (*.json)|*.json|All files (*.*)|*.*" };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        MacroLibraryStore.Import(dialog.FileName);
+        RefreshList();
+        _bindingManager.SetBindings(LoadMacroShortcutBindings());
+    }
+}
+
+internal sealed class MacroListItem
+{
+    public MacroListItem(string filePath, string name, int stepCount)
+    {
+        FilePath = filePath;
+        Name = name;
+        Subtitle = $"{stepCount} step{(stepCount == 1 ? "" : "s")}";
+    }
+
+    public string FilePath { get; }
+    public string Name { get; }
+    public string Subtitle { get; }
 }

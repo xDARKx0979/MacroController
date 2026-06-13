@@ -42,27 +42,3 @@ internal sealed class TriggerCapture : IDisposable
         _mouseHook.Dispose();
     }
 }
-
-/// <summary>Like <see cref="TriggerCapture"/> but only captures a keyboard virtual-key code (for remap targets).</summary>
-internal sealed class KeyCapture : IDisposable
-{
-    private const int VK_ESCAPE = 0x1B;
-
-    private readonly KeyboardHook _hook = new();
-    private readonly TaskCompletionSource<int?> _tcs = new();
-
-    public Task<int?> Result => _tcs.Task;
-
-    public KeyCapture()
-    {
-        _hook.KeyDown += (_, e) =>
-        {
-            e.Handled = true;
-            _tcs.TrySetResult(e.VirtualKeyCode == VK_ESCAPE ? null : e.VirtualKeyCode);
-        };
-
-        _hook.Install();
-    }
-
-    public void Dispose() => _hook.Dispose();
-}

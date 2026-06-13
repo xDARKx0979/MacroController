@@ -6,6 +6,7 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize" Topmost="True"
         ShowInTaskbar="False"
+        Icon="Assets/icon.ico"
         MouseLeftButtonDown="Window_MouseLeftButtonDown">
     <Border Background="#181A20" CornerRadius="10">
         <Grid Margin="20,16,20,0">

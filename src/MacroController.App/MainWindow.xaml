@@ -5,28 +5,57 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MacroController.App"
         mc:Ignorable="d"
-        Title="MacroController" Height="220" Width="400" ResizeMode="CanMinimize"
+        Title="MacroController" Height="440" Width="560"
         Icon="Assets/icon.ico">
-    <Grid Margin="14">
+    <Grid Margin="18">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBlock Text="Active profile:" FontWeight="Bold" VerticalAlignment="Center"/>
-            <TextBlock x:Name="ActiveProfileText" Text="(none)" Margin="6,0,0,0" VerticalAlignment="Center"/>
-        </StackPanel>
+        <TextBlock Grid.Row="0" Text="Macros" FontSize="22" FontWeight="Bold" Margin="0,0,0,14"/>
 
-        <CheckBox Grid.Row="1" x:Name="StartWithWindowsCheckBox" Content="Start with Windows"
-                  Margin="0,0,0,16" Checked="StartWithWindowsCheckBox_Changed" Unchecked="StartWithWindowsCheckBox_Changed"/>
+        <ListBox x:Name="MacroList" Grid.Row="1" Margin="0,0,0,14"
+                 Background="Transparent" BorderThickness="0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Margin" Value="0,0,0,8"/>
+                    <Setter Property="Focusable" Value="False"/>
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{StaticResource CardBrush}" CornerRadius="8" Padding="14,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Stretch">
-            <Button x:Name="MacrosButton" Content="Macros" Click="MacrosButton_Click"
-                    FontSize="16" Width="175" Height="60" Margin="0,0,8,0"/>
-            <Button x:Name="ProfilesButton" Content="Profiles" Click="ProfilesButton_Click"
-                    FontSize="16" Width="175" Height="60"/>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                                <TextBlock Text="{Binding Subtitle}" Foreground="{StaticResource SubtleTextBrush}" FontSize="11" Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="Edit" Tag="{Binding}" Click="EditButton_Click" Style="{StaticResource ListRowButton}" Margin="0"/>
+                                <Button Content="Duplicate" Tag="{Binding}" Click="DuplicateButton_Click" Style="{StaticResource ListRowButton}"/>
+                                <Button Content="Export" Tag="{Binding}" Click="ExportButton_Click" Style="{StaticResource ListRowButton}"/>
+                                <Button Content="Delete" Tag="{Binding}" Click="DeleteButton_Click" Style="{StaticResource ListRowButton}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Import" Click="ImportButton_Click" Padding="10,4" Margin="0,0,8,0"/>
+            <Button Content="Make Macro" Click="NewMacroButton_Click" Style="{StaticResource PrimaryButton}"/>
         </StackPanel>
     </Grid>
 </Window>
