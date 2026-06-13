@@ -19,8 +19,8 @@ internal static class Updater
 {
     // Bump these together with each release. VersionString must match the
     // AppVersion baked into the installer (see build/installer.iss).
-    public const int Version = 7;
-    public const string VersionString = "1.0.6";
+    public const int Version = 8;
+    public const string VersionString = "1.0.7";
 
     // ── GitHub private-repo config ──────────────────────────────────────────
     // Repo: https://github.com/xDARKx0979/MacroController (private)
@@ -84,7 +84,12 @@ internal static class Updater
         try
         {
             using var client = CreateClient();
-            var response = await client.GetByteArrayAsync(ManifestUrl);
+
+            // GitHub's Contents API corrupts raw binary responses for files whose
+            // bytes form invalid UTF-16 sequences (replaced with U+FFFD), so
+            // manifest.dat is stored as base64 text and decoded here instead.
+            var base64 = await client.GetStringAsync(ManifestUrl);
+            var response = Convert.FromBase64String(base64.Trim());
 
             var json = Crypto.Decrypt(response);
             _manifest = JsonSerializer.Deserialize<Manifest>(json);

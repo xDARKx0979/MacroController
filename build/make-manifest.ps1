@@ -64,6 +64,10 @@ $encryptor = $aes.CreateEncryptor()
 $plainBytes = [System.Text.Encoding]::UTF8.GetBytes($manifest)
 $encrypted = $encryptor.TransformFinalBlock($plainBytes, 0, $plainBytes.Length)
 
-[System.IO.File]::WriteAllBytes($OutFile, $encrypted)
-Write-Host "Wrote $OutFile ($($encrypted.Length) bytes) for version $Version" -ForegroundColor Green
+# Stored as base64 text - GitHub's Contents API corrupts raw binary file
+# content for files whose bytes form invalid UTF-16 sequences, but plain
+# ASCII text always survives intact.
+$base64 = [Convert]::ToBase64String($encrypted)
+[System.IO.File]::WriteAllText($OutFile, $base64)
+Write-Host "Wrote $OutFile ($($base64.Length) chars base64, $($encrypted.Length) bytes encrypted) for version $Version" -ForegroundColor Green
 Write-Host "Manifest JSON: $manifest"
