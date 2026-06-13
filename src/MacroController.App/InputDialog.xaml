@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Input" Height="150" Width="360"
+        Title="Input" Height="180" Width="360"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
     <Grid Margin="14">
         <Grid.RowDefinitions>

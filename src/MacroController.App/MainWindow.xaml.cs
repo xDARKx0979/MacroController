@@ -8,6 +8,7 @@ using MacroController.Core.Input;
 using MacroController.Core.Macros;
 using MacroController.Core.Profiles;
 using MacroController.Core.Storage;
+using MacroController.App.Update;
 using Forms = System.Windows.Forms;
 using Trigger = MacroController.Core.Bindings.Trigger;
 
@@ -57,6 +58,27 @@ public partial class MainWindow : Window
 
         _keyboardHook.Install();
         _mouseHook.Install();
+
+        _ = CheckForUpdatesAsync();
+    }
+
+    /// <summary>
+    /// Silently checks the update manifest on startup and, if a newer version is
+    /// available, downloads it and hands off to MacroController.Patcher.exe before exiting.
+    /// </summary>
+    private async Task CheckForUpdatesAsync()
+    {
+        if (!await Updater.CheckForUpdateAsync())
+            return;
+
+        _trayIcon?.ShowBalloonTip(3000, "MacroController", "Update found - installing now...", Forms.ToolTipIcon.Info);
+        await Task.Delay(1500);
+
+        if (await Updater.DownloadAndLaunchPatcherAsync())
+        {
+            _isExiting = true;
+            Close();
+        }
     }
 
     private void InitializeTrayIcon()
@@ -69,7 +91,7 @@ public partial class MainWindow : Window
 
         _trayIcon = new Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = System.Drawing.Icon.ExtractAssociatedIcon(Environment.ProcessPath!) ?? System.Drawing.SystemIcons.Application,
             Visible = true,
             Text = "MacroController",
             ContextMenuStrip = contextMenu,

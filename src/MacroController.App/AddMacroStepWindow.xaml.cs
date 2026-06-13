@@ -57,7 +57,6 @@ public partial class AddMacroStepWindow : Window
     {
         int category = CategoryList.SelectedIndex;
 
-        DelayBeforePanel.Visibility = category is 0 or 7 ? Visibility.Collapsed : Visibility.Visible;
         DelayPanel.Visibility = category == 0 ? Visibility.Visible : Visibility.Collapsed;
         KeyboardPanel.Visibility = category == 1 ? Visibility.Visible : Visibility.Collapsed;
         MousePanel.Visibility = category == 2 ? Visibility.Visible : Visibility.Collapsed;
@@ -147,16 +146,6 @@ public partial class AddMacroStepWindow : Window
     {
         int category = CategoryList.SelectedIndex;
 
-        int delayBefore = 0;
-        if (category is not (0 or 7))
-        {
-            if (!int.TryParse(DelayBeforeInput.Text, out delayBefore) || delayBefore < 0)
-            {
-                ShowError("Enter a non-negative delay.");
-                return;
-            }
-        }
-
         switch (category)
         {
             case 0: // Delay
@@ -188,13 +177,13 @@ public partial class AddMacroStepWindow : Window
 
                 Result = new List<InputEvent>
                 {
-                    new(keyTrigger.Device, keyTrigger.Code, downAction, delayBefore),
+                    new(keyTrigger.Device, keyTrigger.Code, downAction, 0),
                     new(keyTrigger.Device, keyTrigger.Code, upAction, keyHold),
                 };
                 break;
 
             case 2: // Mouse Function
-                var mouseSteps = BuildMouseSteps(delayBefore);
+                var mouseSteps = BuildMouseSteps();
                 if (mouseSteps is null)
                     return;
 
@@ -210,7 +199,7 @@ public partial class AddMacroStepWindow : Window
 
                 Result = new List<InputEvent>
                 {
-                    new(InputDevice.Keyboard, 0, ActionType.CallMacro, delayBefore, Text: _macros[MacroCombo.SelectedIndex].Id),
+                    new(InputDevice.Keyboard, 0, ActionType.CallMacro, 0, Text: _macros[MacroCombo.SelectedIndex].Id),
                 };
                 break;
 
@@ -223,7 +212,7 @@ public partial class AddMacroStepWindow : Window
 
                 Result = new List<InputEvent>
                 {
-                    new(InputDevice.Keyboard, 0, ActionType.LaunchApp, delayBefore,
+                    new(InputDevice.Keyboard, 0, ActionType.LaunchApp, 0,
                         Text: LaunchPathInput.Text.Trim(),
                         Text2: string.IsNullOrWhiteSpace(LaunchArgsInput.Text) ? null : LaunchArgsInput.Text.Trim()),
                 };
@@ -238,7 +227,7 @@ public partial class AddMacroStepWindow : Window
 
                 Result = new List<InputEvent>
                 {
-                    new(InputDevice.Keyboard, 0, ActionType.RunCommand, delayBefore, Text: RunCommandInput.Text.Trim()),
+                    new(InputDevice.Keyboard, 0, ActionType.RunCommand, 0, Text: RunCommandInput.Text.Trim()),
                 };
                 break;
 
@@ -251,7 +240,7 @@ public partial class AddMacroStepWindow : Window
 
                 Result = new List<InputEvent>
                 {
-                    new(InputDevice.Keyboard, 0, ActionType.TypeText, delayBefore, Text: TextFunctionInput.Text),
+                    new(InputDevice.Keyboard, 0, ActionType.TypeText, 0, Text: TextFunctionInput.Text),
                 };
                 break;
 
@@ -273,7 +262,7 @@ public partial class AddMacroStepWindow : Window
         DialogResult = true;
     }
 
-    private List<InputEvent>? BuildMouseSteps(int delayBefore)
+    private List<InputEvent>? BuildMouseSteps()
     {
         int mode = MouseActionCombo.SelectedIndex; // 0 = Click, 1 = Double-Click, 2 = Wheel
 
@@ -286,7 +275,7 @@ public partial class AddMacroStepWindow : Window
             }
 
             var wheelAction = MouseWheelDirectionCombo.SelectedIndex == 1 ? ActionType.HWheel : ActionType.Wheel;
-            return new List<InputEvent> { new(InputDevice.Mouse, delta, wheelAction, delayBefore) };
+            return new List<InputEvent> { new(InputDevice.Mouse, delta, wheelAction, 0) };
         }
 
         if (_mouseTrigger is not { } trigger)
@@ -311,7 +300,7 @@ public partial class AddMacroStepWindow : Window
 
             return new List<InputEvent>
             {
-                new(trigger.Device, trigger.Code, ActionType.MouseDown, delayBefore),
+                new(trigger.Device, trigger.Code, ActionType.MouseDown, 0),
                 new(trigger.Device, trigger.Code, ActionType.MouseUp, hold),
                 new(trigger.Device, trigger.Code, ActionType.MouseDown, gap),
                 new(trigger.Device, trigger.Code, ActionType.MouseUp, hold),
@@ -320,7 +309,7 @@ public partial class AddMacroStepWindow : Window
 
         return new List<InputEvent>
         {
-            new(trigger.Device, trigger.Code, ActionType.MouseDown, delayBefore),
+            new(trigger.Device, trigger.Code, ActionType.MouseDown, 0),
             new(trigger.Device, trigger.Code, ActionType.MouseUp, hold),
         };
     }

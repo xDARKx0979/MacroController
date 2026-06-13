@@ -2,3 +2,14 @@ bin/
 obj/
 .vs/
 *.user
+
+# Build pipeline output (build/publish.ps1)
+build/publish/
+build/publish-patcher/
+build/obfuscated/
+dist/
+
+# Release artifacts for the separate update repo (build/make-manifest.ps1)
+build/manifest.dat
+build/update.zip
+build/*.zip

@@ -152,11 +152,7 @@ public partial class MacroEditorWindow : Window
             loopPanel.Children.Add(countInput);
             column2 = loopPanel;
         }
-        else if (step.Action == ActionType.LoopEnd)
-        {
-            column2 = new Border();
-        }
-        else
+        else if (step.Action == ActionType.Delay)
         {
             var delayPanel = new StackPanel
             {
@@ -170,13 +166,17 @@ public partial class MacroEditorWindow : Window
                 Width = 50,
                 TextAlignment = TextAlignment.Right,
                 Tag = index,
-                ToolTip = "Delay before this step (ms)",
+                ToolTip = "How long to wait",
             };
             delayInput.LostFocus += DelayInput_LostFocus;
             delayInput.KeyDown += DelayInput_KeyDown;
             delayPanel.Children.Add(delayInput);
             delayPanel.Children.Add(new TextBlock { Text = " ms", Foreground = Brushes.Gray, VerticalAlignment = VerticalAlignment.Center });
             column2 = delayPanel;
+        }
+        else
+        {
+            column2 = new Border();
         }
         Grid.SetColumn(column2, 2);
 

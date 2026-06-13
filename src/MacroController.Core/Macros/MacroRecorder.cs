@@ -55,8 +55,12 @@ public sealed class MacroRecorder
 
     private void Record(InputDevice device, int code, ActionType action)
     {
-        int delayMs = (int)_stopwatch.ElapsedMilliseconds;
+        int elapsedMs = (int)_stopwatch.ElapsedMilliseconds;
         _stopwatch.Restart();
-        _steps.Add(new InputEvent(device, code, action, delayMs));
+
+        if (elapsedMs > 0)
+            _steps.Add(new InputEvent(InputDevice.Keyboard, 0, ActionType.Delay, elapsedMs));
+
+        _steps.Add(new InputEvent(device, code, action, 0));
     }
 }

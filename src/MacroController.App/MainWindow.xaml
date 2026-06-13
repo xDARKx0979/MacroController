@@ -5,7 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MacroController.App"
         mc:Ignorable="d"
-        Title="MacroController" Height="220" Width="400" ResizeMode="CanMinimize">
+        Title="MacroController" Height="220" Width="400" ResizeMode="CanMinimize"
+        Icon="Assets/icon.ico">
     <Grid Margin="14">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

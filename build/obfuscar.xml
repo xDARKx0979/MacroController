@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Obfuscator>
+  <Var name="InPath" value="publish" />
+  <Var name="OutPath" value="obfuscated" />
+  <Var name="AssemblySearchPath" value="publish" />
+  <Var name="KeepPublicApi" value="true" />
+  <Var name="HidePrivateApi" value="true" />
+  <Var name="UseUnicodeNames" value="false" />
+  <Var name="SuppressIldasm" value="true" />
+
+  <Module file="$(InPath)\MacroController.App.dll" />
+  <Module file="$(InPath)\MacroController.Core.dll" />
+</Obfuscator>

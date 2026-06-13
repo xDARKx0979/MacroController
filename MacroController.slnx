@@ -3,5 +3,6 @@
     <Project Path="src/MacroController.Core/MacroController.Core.csproj" />
     <Project Path="src/MacroController.Spike/MacroController.Spike.csproj" />
     <Project Path="src/MacroController.App/MacroController.App.csproj" />
+    <Project Path="src/MacroController.Patcher/MacroController.Patcher.csproj" />
   </Folder>
 </Solution>
