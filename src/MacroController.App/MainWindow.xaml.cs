@@ -70,9 +70,9 @@ public partial class MainWindow : Window
 
         if (await Updater.DownloadAndLaunchPatcherAsync(progress))
         {
-            progressWindow.SetStatus("Installing update...");
-            progressWindow.SetIndeterminate();
-            await Task.Delay(500);
+            // The patcher has its own window and takes over from here, so close
+            // ours immediately rather than leaving two overlapping status popups.
+            progressWindow.Close();
 
             _isExiting = true;
             Close();
