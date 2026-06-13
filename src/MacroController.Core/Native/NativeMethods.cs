@@ -133,6 +133,8 @@ internal static class NativeMethods
     public const uint MOUSEEVENTF_HWHEEL = 0x1000;
 
     public const uint MAPVK_VK_TO_VSC = 0x00;
+    public const uint MAPVK_VSC_TO_VK = 0x01;
+    public const uint MAPVK_VSC_TO_VK_EX = 0x03;
 
     [DllImport("user32.dll")]
     public static extern uint MapVirtualKey(uint uCode, uint uMapType);

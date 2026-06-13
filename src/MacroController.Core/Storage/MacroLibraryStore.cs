@@ -56,6 +56,13 @@ public static class MacroLibraryStore
         return SaveAsNew(macro);
     }
 
+    /// <summary>Adds an in-memory macro (e.g. converted from a third-party format) to the library with a fresh <see cref="Macro.Id"/>, returning its new file path.</summary>
+    public static string ImportConverted(Macro macro)
+    {
+        macro.Id = Guid.NewGuid().ToString("N");
+        return SaveAsNew(macro);
+    }
+
     private static string SaveAsNew(Macro macro)
     {
         Directory.CreateDirectory(MacrosDirectory);

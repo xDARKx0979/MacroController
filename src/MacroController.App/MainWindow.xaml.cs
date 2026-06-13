@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using MacroController.Core.Bindings;
 using MacroController.Core.Hooks;
+using MacroController.Core.Importers;
 using MacroController.Core.Input;
 using MacroController.Core.Macros;
 using MacroController.Core.Storage;
@@ -255,11 +257,64 @@ public partial class MainWindow : Window
 
     private void ImportButton_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Filter = "Macro files (*.json)|*.json|All files (*.*)|*.*" };
+        var button = (Button)sender;
+        button.ContextMenu!.IsOpen = true;
+    }
+
+    private void FileImportMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Filter = VendorMacroScanner.OpenFileDialogFilter };
         if (dialog.ShowDialog(this) != true)
             return;
 
-        MacroLibraryStore.Import(dialog.FileName);
+        if (string.Equals(Path.GetExtension(dialog.FileName), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            MacroLibraryStore.Import(dialog.FileName);
+            RefreshList();
+            _bindingManager.SetBindings(LoadMacroShortcutBindings());
+            return;
+        }
+
+        var importer = VendorMacroScanner.FindImporter(dialog.FileName);
+        if (importer is null)
+        {
+            MessageBox.Show(this, "This file isn't a recognized macro format.", "Import",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var results = importer.Parse(dialog.FileName);
+        int imported = 0;
+        var lines = new List<string>();
+
+        foreach (var result in results)
+        {
+            if (result.Status == MacroImportStatus.Imported && result.Macro is not null)
+            {
+                MacroLibraryStore.ImportConverted(result.Macro);
+                imported++;
+                lines.Add($"✔ {result.SourceName} - imported");
+            }
+            else
+            {
+                lines.Add($"✖ {result.SourceName} - incompatible: {result.Reason}");
+            }
+        }
+
+        RefreshList();
+        _bindingManager.SetBindings(LoadMacroShortcutBindings());
+
+        MessageBox.Show(this, string.Join("\n", lines), imported > 0 ? "Import complete" : "Import failed",
+            MessageBoxButton.OK, imported > 0 ? MessageBoxImage.Information : MessageBoxImage.Warning);
+    }
+
+    private void VendorImportMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        var results = VendorMacroScanner.ScanAndImport();
+
+        var window = new VendorImportResultsWindow(results) { Owner = this };
+        window.ShowDialog();
+
         RefreshList();
         _bindingManager.SetBindings(LoadMacroShortcutBindings());
     }
