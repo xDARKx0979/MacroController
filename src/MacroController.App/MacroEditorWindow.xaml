@@ -83,8 +83,6 @@
             </StackPanel>
         </StackPanel>
 
-        <TextBlock Grid.Row="5" x:Name="StatusText" Foreground="#FF6B6B" Margin="0,0,0,8"/>
-
         <Border Grid.Row="6" BorderBrush="#FF3F3F3F" BorderThickness="1" CornerRadius="4">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="6">
                 <StackPanel x:Name="StepsPanel"/>

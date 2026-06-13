@@ -19,8 +19,8 @@ internal static class Updater
 {
     // Bump these together with each release. VersionString must match the
     // AppVersion baked into the installer (see build/installer.iss).
-    public const int Version = 2;
-    public const string VersionString = "1.0.1";
+    public const int Version = 3;
+    public const string VersionString = "1.0.2";
 
     // ── GitHub private-repo config ──────────────────────────────────────────
     // Repo: https://github.com/xDARKx0979/MacroController (private)
@@ -107,7 +107,7 @@ internal static class Updater
     /// launches MacroController.Patcher.exe to finish the swap. Returns true if the
     /// patcher was launched successfully (the caller should exit immediately after).
     /// </summary>
-    public static async Task<bool> DownloadAndLaunchPatcherAsync()
+    public static async Task<bool> DownloadAndLaunchPatcherAsync(IProgress<double>? downloadProgress = null)
     {
         if (_manifest is null)
             return false;
@@ -116,15 +116,36 @@ internal static class Updater
         {
             Log($"Downloading update from {_manifest.DownloadUrl}");
             using var client = CreateClient("application/octet-stream");
-            var data = await client.GetByteArrayAsync(_manifest.DownloadUrl);
 
             var zipPath = Path.Combine(ExeDirectory, "update.zip");
-            await File.WriteAllBytesAsync(zipPath, data);
-            Log($"Download complete ({data.Length / 1024} KB), verifying...");
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            long totalRead = 0;
+
+            using (var response = await client.GetAsync(_manifest.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+            {
+                response.EnsureSuccessStatusCode();
+                var totalBytes = response.Content.Headers.ContentLength;
+
+                using var contentStream = await response.Content.ReadAsStreamAsync();
+                using var fileStream = File.Create(zipPath);
+
+                var buffer = new byte[81920];
+                int read;
+                while ((read = await contentStream.ReadAsync(buffer)) > 0)
+                {
+                    await fileStream.WriteAsync(buffer.AsMemory(0, read));
+                    hash.AppendData(buffer, 0, read);
+                    totalRead += read;
+                    if (totalBytes is > 0)
+                        downloadProgress?.Report((double)totalRead / totalBytes.Value);
+                }
+            }
+
+            Log($"Download complete ({totalRead / 1024} KB), verifying...");
 
             if (!string.IsNullOrEmpty(_manifest.Sha256))
             {
-                var actual = Crypto.BytesToHex(SHA256.HashData(data));
+                var actual = Crypto.BytesToHex(hash.GetHashAndReset());
                 if (!string.Equals(actual, _manifest.Sha256, StringComparison.OrdinalIgnoreCase))
                 {
                     Log($"SHA256 mismatch (expected {_manifest.Sha256}, got {actual}), aborting update");

@@ -16,6 +16,9 @@ public sealed class MacroRecorder
 
     public bool IsRecording { get; private set; }
 
+    /// <summary>Raised for each step (including standalone delay steps) as it's recorded.</summary>
+    public event Action<InputEvent>? StepRecorded;
+
     public void Start()
     {
         _steps.Clear();
@@ -59,8 +62,14 @@ public sealed class MacroRecorder
         _stopwatch.Restart();
 
         if (elapsedMs > 0)
-            _steps.Add(new InputEvent(InputDevice.Keyboard, 0, ActionType.Delay, elapsedMs));
+        {
+            var delayStep = new InputEvent(InputDevice.Keyboard, 0, ActionType.Delay, elapsedMs);
+            _steps.Add(delayStep);
+            StepRecorded?.Invoke(delayStep);
+        }
 
-        _steps.Add(new InputEvent(device, code, action, 0));
+        var step = new InputEvent(device, code, action, 0);
+        _steps.Add(step);
+        StepRecorded?.Invoke(step);
     }
 }

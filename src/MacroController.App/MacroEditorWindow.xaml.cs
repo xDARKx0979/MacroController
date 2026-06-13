@@ -19,7 +19,6 @@ public partial class MacroEditorWindow : Window
     private string _filePath;
     private Point _dragStart;
     private bool _dragging;
-    private bool _countingDown;
 
     public MacroEditorWindow(Macro macro, string filePath, MacroRecorder recorder)
     {
@@ -373,34 +372,14 @@ public partial class MacroEditorWindow : Window
             RandomDelayMaxInput.Text = _macro.RandomDelayMaxMs.ToString();
     }
 
-    private async void RecordButton_Click(object sender, RoutedEventArgs e)
+    private void RecordButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_recorder.IsRecording)
+        var dialog = new RecordingWindow(_recorder) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.Result is { } steps)
         {
-            var recorded = _recorder.Stop(_macro.Name);
-            _macro.Steps = recorded.Steps;
-            RecordButton.Content = "Record";
-            StatusText.Text = "";
+            _macro.Steps = steps;
             RefreshSteps();
-            return;
         }
-
-        if (_countingDown)
-            return;
-
-        _countingDown = true;
-        RecordButton.IsEnabled = false;
-        for (int i = 3; i >= 1; i--)
-        {
-            StatusText.Text = $"Recording starts in {i}...";
-            await Task.Delay(1000);
-        }
-
-        StatusText.Text = "Recording... perform the actions, then click Stop.";
-        _recorder.Start();
-        RecordButton.Content = "Stop";
-        RecordButton.IsEnabled = true;
-        _countingDown = false;
     }
 
     private void OpenButton_Click(object sender, RoutedEventArgs e)

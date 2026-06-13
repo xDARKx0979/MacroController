@@ -32,12 +32,19 @@ internal static class Program
     private static void SetStatus(string text) =>
         _form?.Invoke(new Action(() => _form.SetStatus(text)));
 
+    private static void SetProgress(int percent) =>
+        _form?.Invoke(new Action(() => _form.SetProgress(percent)));
+
+    private static void SetIndeterminate() =>
+        _form?.Invoke(new Action(() => _form.SetIndeterminate()));
+
     private static void DoUpdate()
     {
         var exeDir = AppDomain.CurrentDomain.BaseDirectory;
         var appExe = Path.Combine(exeDir, "MacroController.App.exe");
         var tempDir = Path.Combine(exeDir, "update_temp");
 
+        SetIndeterminate();
         SetStatus("Waiting for MacroController to close...");
         var deadline = DateTime.UtcNow.AddSeconds(30);
         while (DateTime.UtcNow < deadline)
@@ -55,8 +62,12 @@ internal static class Program
         SetStatus("Installing update...");
         if (Directory.Exists(tempDir))
         {
-            foreach (var source in Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories))
+            var files = Directory.GetFiles(tempDir, "*", SearchOption.AllDirectories);
+            SetProgress(0);
+
+            for (int i = 0; i < files.Length; i++)
             {
+                var source = files[i];
                 var relative = source[tempDir.Length..].TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 var destination = Path.Combine(exeDir, relative);
 
@@ -79,6 +90,8 @@ internal static class Program
                         Thread.Sleep(500);
                     }
                 }
+
+                SetProgress((i + 1) * 100 / files.Length);
             }
 
             try { Directory.Delete(tempDir, recursive: true); } catch { }
@@ -87,6 +100,7 @@ internal static class Program
         var zipPath = Path.Combine(exeDir, "update.zip");
         try { if (File.Exists(zipPath)) File.Delete(zipPath); } catch { }
 
+        SetIndeterminate();
         SetStatus("Launching MacroController...");
         Thread.Sleep(600);
 
@@ -114,13 +128,14 @@ internal static class Program
 internal sealed class UpdaterForm : Form
 {
     private readonly Label _statusLabel;
+    private readonly ProgressBar _progressBar;
 
     public UpdaterForm()
     {
         FormBorderStyle = FormBorderStyle.None;
         BackColor = Color.FromArgb(24, 26, 32);
         StartPosition = FormStartPosition.CenterScreen;
-        Size = new Size(340, 110);
+        Size = new Size(340, 120);
         TopMost = true;
 
         var path = new GraphicsPath();
@@ -150,6 +165,14 @@ internal sealed class UpdaterForm : Form
             Location = new Point(20, 52),
         };
 
+        _progressBar = new ProgressBar
+        {
+            Style = ProgressBarStyle.Marquee,
+            MarqueeAnimationSpeed = 30,
+            Size = new Size(300, 6),
+            Location = new Point(20, 80),
+        };
+
         var accent = new Panel
         {
             BackColor = Color.FromArgb(79, 142, 247),
@@ -159,6 +182,7 @@ internal sealed class UpdaterForm : Form
 
         Controls.Add(titleLabel);
         Controls.Add(_statusLabel);
+        Controls.Add(_progressBar);
         Controls.Add(accent);
 
         MouseDown += (_, e) =>
@@ -177,6 +201,17 @@ internal sealed class UpdaterForm : Form
             _statusLabel.Invoke(new Action(() => _statusLabel.Text = text));
         else
             _statusLabel.Text = text;
+    }
+
+    public void SetProgress(int percent)
+    {
+        _progressBar.Style = ProgressBarStyle.Continuous;
+        _progressBar.Value = Math.Clamp(percent, 0, 100);
+    }
+
+    public void SetIndeterminate()
+    {
+        _progressBar.Style = ProgressBarStyle.Marquee;
     }
 }
 

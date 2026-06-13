@@ -16,14 +16,6 @@ namespace MacroController.App;
 
 public partial class MainWindow : Window
 {
-    private const int VK_F1 = 0x70;
-    private const int VK_F2 = 0x71;
-    private const int VK_F3 = 0x72;
-    private const int VK_F4 = 0x73;
-    private const int VK_B = 0x42;
-    private const int VK_C = 0x43;
-    private const int VK_N = 0x4E;
-    private const string MacroFilePath = "macro.json";
     private const string ProfilesFilePath = "profiles.json";
 
     private readonly KeyboardHook _keyboardHook = new();
@@ -71,13 +63,23 @@ public partial class MainWindow : Window
         if (!await Updater.CheckForUpdateAsync())
             return;
 
-        _trayIcon?.ShowBalloonTip(3000, "MacroController", "Update found - installing now...", Forms.ToolTipIcon.Info);
-        await Task.Delay(1500);
+        var progressWindow = new UpdateProgressWindow();
+        progressWindow.Show();
 
-        if (await Updater.DownloadAndLaunchPatcherAsync())
+        var progress = new Progress<double>(progressWindow.SetProgress);
+
+        if (await Updater.DownloadAndLaunchPatcherAsync(progress))
         {
+            progressWindow.SetStatus("Installing update...");
+            progressWindow.SetIndeterminate();
+            await Task.Delay(500);
+
             _isExiting = true;
             Close();
+        }
+        else
+        {
+            progressWindow.Close();
         }
     }
 
@@ -156,45 +158,8 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
-    /// <summary>Loads profiles.json if present, otherwise falls back to the built-in demo set.</summary>
-    private List<Profile> LoadProfiles() => File.Exists(ProfilesFilePath) ? ProfileStore.Load(ProfilesFilePath) : BuildProfiles();
-
-    /// <summary>
-    /// Demo profile set: "Default" applies everywhere, "Notepad" overrides F1 while
-    /// Notepad is focused - lets us see auto-switching happen live in the log.
-    /// </summary>
-    private List<Profile> BuildProfiles()
-    {
-        var defaultProfile = new Profile
-        {
-            Name = "Default",
-            Bindings =
-            {
-                new Binding(new Trigger(InputDevice.Keyboard, VK_F1), new RemapAction(VK_B)),
-                new Binding(new Trigger(InputDevice.Keyboard, VK_F3), new TextAction("Hello from MacroController!")),
-                new Binding(new Trigger(InputDevice.Keyboard, VK_F4), new LaunchAppAction("notepad.exe")),
-                new Binding(new Trigger(InputDevice.Mouse, (int)MouseButton.X1), new RemapAction(VK_C)),
-            },
-        };
-
-        var notepadProfile = new Profile
-        {
-            Name = "Notepad",
-            MatchProcessNames = { "notepad" },
-            Bindings =
-            {
-                new Binding(new Trigger(InputDevice.Keyboard, VK_F1), new RemapAction(VK_N)),
-            },
-        };
-
-        if (File.Exists(MacroFilePath))
-        {
-            var macro = MacroStore.Load(MacroFilePath);
-            defaultProfile.Bindings.Add(new Binding(new Trigger(InputDevice.Keyboard, VK_F2), new MacroAction(macro)));
-        }
-
-        return new List<Profile> { defaultProfile, notepadProfile };
-    }
+    /// <summary>Loads profiles.json if present, otherwise falls back to a single empty "Default" profile.</summary>
+    private List<Profile> LoadProfiles() => File.Exists(ProfilesFilePath) ? ProfileStore.Load(ProfilesFilePath) : new List<Profile> { new() };
 
     private void WireHooks()
     {
