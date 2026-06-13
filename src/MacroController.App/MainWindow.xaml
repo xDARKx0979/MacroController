@@ -54,15 +54,19 @@
         </ListBox>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Import" Click="ImportButton_Click" Padding="10,4" Margin="0,0,8,0">
-                <Button.ContextMenu>
-                    <ContextMenu Placement="Bottom">
-                        <MenuItem Header="File Import..." Click="FileImportMenuItem_Click"/>
-                        <MenuItem Header="Razer Import..." Click="VendorImportMenuItem_Click"/>
-                    </ContextMenu>
-                </Button.ContextMenu>
-            </Button>
+            <Button x:Name="ImportButton" Content="Import" Click="ImportButton_Click" Padding="10,4" Margin="0,0,8,0"/>
             <Button Content="Make Macro" Click="NewMacroButton_Click" Style="{StaticResource PrimaryButton}"/>
         </StackPanel>
+
+        <Popup x:Name="ImportMenuPopup" PlacementTarget="{Binding ElementName=ImportButton}"
+               Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Background="{StaticResource CardBrush}" CornerRadius="6" Padding="4"
+                    BorderBrush="{StaticResource SubtleTextBrush}" BorderThickness="1">
+                <StackPanel MinWidth="180">
+                    <Button Content="File Import..." Click="FileImportMenuItem_Click" Style="{StaticResource MenuPopupButton}"/>
+                    <Button Content="Razer Import..." Click="VendorImportMenuItem_Click" Style="{StaticResource MenuPopupButton}"/>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </Window>

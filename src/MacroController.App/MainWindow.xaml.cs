@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using MacroController.Core.Bindings;
 using MacroController.Core.Hooks;
 using MacroController.Core.Importers;
@@ -258,15 +257,13 @@ public partial class MainWindow : Window
 
     private void ImportButton_Click(object sender, RoutedEventArgs e)
     {
-        var button = (Button)sender;
-        var menu = button.ContextMenu!;
-        menu.PlacementTarget = button;
-        menu.Placement = PlacementMode.Bottom;
-        menu.IsOpen = true;
+        ImportMenuPopup.IsOpen = !ImportMenuPopup.IsOpen;
     }
 
     private void FileImportMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        ImportMenuPopup.IsOpen = false;
+
         var dialog = new OpenFileDialog { Filter = VendorMacroScanner.OpenFileDialogFilter };
         if (dialog.ShowDialog(this) != true)
             return;
@@ -314,6 +311,8 @@ public partial class MainWindow : Window
 
     private void VendorImportMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        ImportMenuPopup.IsOpen = false;
+
         var results = VendorMacroScanner.ScanAndImport();
 
         var window = new VendorImportResultsWindow(results) { Owner = this };
