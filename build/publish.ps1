@@ -63,4 +63,33 @@ Write-Host "==> Building installer" -ForegroundColor Cyan
 & $iscc "/DAppVersion=$appVersion" (Join-Path $buildDir "installer.iss")
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed" }
 
+# Auto-update package: only MacroController's own output files. The bundled
+# .NET/WPF/WinForms self-contained runtime (~150MB, ~250 files) is identical
+# across builds with the same SDK/TFM/RID and is already on disk from the
+# original installer, so the patcher never needs to touch it. This keeps
+# update downloads/extracts/copies to a handful of small files instead of
+# the full ~155MB publish output.
+Write-Host "==> Building update package" -ForegroundColor Cyan
+$updateFiles = @(
+    "MacroController.App.exe",
+    "MacroController.App.dll",
+    "MacroController.App.deps.json",
+    "MacroController.App.runtimeconfig.json",
+    "MacroController.Core.dll",
+    "MacroController.Patcher.exe",
+    "MacroController.Patcher.dll",
+    "MacroController.Patcher.deps.json",
+    "MacroController.Patcher.runtimeconfig.json"
+)
+$updateStaging = Join-Path $buildDir "update-staging"
+Remove-Item -Recurse -Force $updateStaging -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path $updateStaging | Out-Null
+foreach ($file in $updateFiles) {
+    Copy-Item (Join-Path $publishDir $file) $updateStaging
+}
+$updateZip = Join-Path $distDir "MacroController-Update-$appVersion.zip"
+Compress-Archive -Path "$updateStaging\*" -DestinationPath $updateZip -Force
+Remove-Item -Recurse -Force $updateStaging
+
 Write-Host "==> Done: $distDir\MacroControllerSetup.exe" -ForegroundColor Green
+Write-Host "==> Done: $updateZip" -ForegroundColor Green

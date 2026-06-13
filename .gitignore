@@ -7,6 +7,7 @@ obj/
 build/publish/
 build/publish-patcher/
 build/obfuscated/
+build/update-staging/
 dist/
 
 # Release artifacts for the separate update repo (build/make-manifest.ps1)

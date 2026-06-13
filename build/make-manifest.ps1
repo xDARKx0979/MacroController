@@ -5,8 +5,11 @@
 .DESCRIPTION
     Run this after publishing a new release of MacroController:
       1. Run build\publish.ps1 to produce dist\MacroControllerSetup.exe and bump
-         Update/Updater.cs's Version/VersionString for the NEW build.
-      2. Zip up build\publish\* (the updated app files) - this is what gets
+         Update/Updater.cs's Version/VersionString for the NEW build. This also
+         produces dist\MacroController-Update-<version>.zip, a small package
+         containing only MacroController's own files (the bundled .NET/WPF
+         runtime is static across versions and is skipped).
+      2. Use dist\MacroController-Update-<version>.zip - this is what gets
          downloaded and extracted by the patcher on older clients.
       3. Create a GitHub Release in the private xDARKx0979/MacroController repo
          and upload that zip as a release asset.
