@@ -265,6 +265,10 @@ public partial class MainWindow : Window
     }
 }
 
+// Excluded from Obfuscar's renaming - its properties are referenced by name
+// from MainWindow.xaml's {Binding} expressions, which resolve via reflection
+// at runtime and would silently break if renamed.
+[System.Reflection.Obfuscation(Exclude = true, ApplyToMembers = true)]
 internal sealed class MacroListItem
 {
     public MacroListItem(string filePath, string name, int stepCount)
