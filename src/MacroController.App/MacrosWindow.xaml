@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Macros" Height="440" Width="440"
+        Title="Macros" Height="440" Width="560"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="14">
         <Grid.RowDefinitions>
@@ -23,6 +23,8 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -31,13 +33,16 @@
                         </StackPanel>
 
                         <Button Grid.Column="1" Content="Edit" Tag="{Binding}" Click="EditButton_Click" Padding="10,4" Margin="6,0"/>
-                        <Button Grid.Column="2" Content="Delete" Tag="{Binding}" Click="DeleteButton_Click" Padding="10,4"/>
+                        <Button Grid.Column="2" Content="Duplicate" Tag="{Binding}" Click="DuplicateButton_Click" Padding="10,4" Margin="0,0,6,0"/>
+                        <Button Grid.Column="3" Content="Export..." Tag="{Binding}" Click="ExportButton_Click" Padding="10,4" Margin="0,0,6,0"/>
+                        <Button Grid.Column="4" Content="Delete" Tag="{Binding}" Click="DeleteButton_Click" Padding="10,4"/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Import..." Click="ImportButton_Click" Padding="10,4" Margin="0,0,8,0"/>
             <Button Content="Make Macro..." Click="NewMacroButton_Click" Padding="10,4" Margin="0,0,8,0"/>
             <Button Content="Close" IsCancel="True" Padding="10,4"/>
         </StackPanel>

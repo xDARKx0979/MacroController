@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using Microsoft.Win32;
 using MacroController.Core.Macros;
 using MacroController.Core.Storage;
 
@@ -59,6 +60,42 @@ public partial class MacrosWindow : Window
             return;
 
         File.Delete(item.FilePath);
+        RefreshList();
+    }
+
+    private void DuplicateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is not MacroListItem item)
+            return;
+
+        MacroLibraryStore.Duplicate(item.FilePath);
+        RefreshList();
+    }
+
+    private void ExportButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).Tag is not MacroListItem item)
+            return;
+
+        string safeName = string.Concat(item.Name.Split(Path.GetInvalidFileNameChars()));
+        var dialog = new SaveFileDialog
+        {
+            Filter = "Macro files (*.json)|*.json|All files (*.*)|*.*",
+            FileName = $"{safeName}.json",
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        MacroLibraryStore.Export(item.FilePath, dialog.FileName);
+    }
+
+    private void ImportButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Filter = "Macro files (*.json)|*.json|All files (*.*)|*.*" };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        MacroLibraryStore.Import(dialog.FileName);
         RefreshList();
     }
 }

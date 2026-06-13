@@ -10,6 +10,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- name -->
             <RowDefinition Height="Auto"/> <!-- toolbar -->
+            <RowDefinition Height="Auto"/> <!-- shortcut -->
             <RowDefinition Height="Auto"/> <!-- playback mode -->
             <RowDefinition Height="Auto"/> <!-- standard delay -->
             <RowDefinition Height="Auto"/> <!-- status -->
@@ -27,7 +28,14 @@
             <Button x:Name="PlayButton" Content="Play" Click="PlayButton_Click" Padding="8,4"/>
         </StackPanel>
 
-        <Grid Grid.Row="2" Margin="0,0,0,8">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,8" VerticalAlignment="Center">
+            <TextBlock Text="Global shortcut:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Gray"/>
+            <TextBlock x:Name="ShortcutText" Text="None" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="Bold"/>
+            <Button x:Name="CaptureShortcutButton" Content="Capture..." Click="CaptureShortcutButton_Click" Padding="8,4" Margin="0,0,6,0"/>
+            <Button Content="Clear" Click="ClearShortcutButton_Click" Padding="8,4"/>
+        </StackPanel>
+
+        <Grid Grid.Row="3" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -50,7 +58,7 @@
             </StackPanel>
         </Grid>
 
-        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,8">
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,8">
             <TextBlock Text="Delay between steps:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Gray"/>
 
             <ComboBox x:Name="DelayModeCombo" Width="160" SelectionChanged="DelayModeCombo_SelectionChanged">
@@ -75,20 +83,19 @@
             </StackPanel>
         </StackPanel>
 
-        <TextBlock Grid.Row="4" x:Name="StatusText" Foreground="#FF6B6B" Margin="0,0,0,8"/>
+        <TextBlock Grid.Row="5" x:Name="StatusText" Foreground="#FF6B6B" Margin="0,0,0,8"/>
 
-        <Border Grid.Row="5" BorderBrush="#FF3F3F3F" BorderThickness="1" CornerRadius="4">
+        <Border Grid.Row="6" BorderBrush="#FF3F3F3F" BorderThickness="1" CornerRadius="4">
             <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="6">
                 <StackPanel x:Name="StepsPanel"/>
             </ScrollViewer>
         </Border>
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" Margin="0,8,0,0">
-            <Button Content="+ Add Action..." Click="AddStepButton_Click" Padding="8,6" Margin="0,0,8,0"/>
-            <Button Content="+ Add Loop" Click="AddLoopButton_Click" Padding="8,6"/>
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Margin="0,8,0,0">
+            <Button Content="+ Add Step..." Click="AddStepButton_Click" Padding="8,6"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+        <StackPanel Grid.Row="8" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="Save" Click="SaveButton_Click" Width="70" Margin="0,0,8,0"/>
             <Button Content="Save As..." Click="SaveAsButton_Click" Width="80" Margin="0,0,8,0"/>
             <Button Content="Close" IsCancel="True" Width="70"/>

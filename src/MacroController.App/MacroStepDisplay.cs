@@ -1,5 +1,7 @@
+using System.IO;
 using MacroController.Core.Hooks;
 using MacroController.Core.Input;
+using MacroController.Core.Storage;
 
 namespace MacroController.App;
 
@@ -13,6 +15,11 @@ internal static class MacroStepDisplay
         ActionType.Wheel => "↕",
         ActionType.HWheel => "↔",
         ActionType.LoopStart or ActionType.LoopEnd => "🔁",
+        ActionType.Delay => "⏱",
+        ActionType.LaunchApp => "🚀",
+        ActionType.RunCommand => "💻",
+        ActionType.TypeText => "📝",
+        ActionType.CallMacro => "▶",
         _ => "•",
     };
 
@@ -27,8 +34,19 @@ internal static class MacroStepDisplay
         ActionType.HWheel => step.Code > 0 ? "Mouse Wheel — Right" : "Mouse Wheel — Left",
         ActionType.LoopStart => $"Loop Start — repeat ×{Math.Max(1, step.Code)}",
         ActionType.LoopEnd => "Loop End",
+        ActionType.Delay => "Wait",
+        ActionType.LaunchApp => $"Launch {Path.GetFileName(step.Text)}" + (string.IsNullOrEmpty(step.Text2) ? "" : $" {step.Text2}"),
+        ActionType.RunCommand => $"Run: {Truncate(step.Text)}",
+        ActionType.TypeText => $"Type \"{Truncate(step.Text)}\"",
+        ActionType.CallMacro => $"Play macro '{(step.Text is { } id ? MacroLibraryStore.FindById(id)?.Name : null) ?? "(missing)"}'",
         _ => step.Action.ToString(),
     };
+
+    private static string Truncate(string? text, int maxLength = 40)
+    {
+        text = (text ?? "").Replace('\r', ' ').Replace('\n', ' ');
+        return text.Length <= maxLength ? text : text[..maxLength] + "…";
+    }
 
     private static string MouseButtonName(int code) => (MouseButton)code switch
     {

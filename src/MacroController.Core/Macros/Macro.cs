@@ -1,3 +1,4 @@
+using MacroController.Core.Bindings;
 using MacroController.Core.Input;
 
 namespace MacroController.Core.Macros;
@@ -36,9 +37,15 @@ public enum MacroDelayMode
 
 public class Macro
 {
+    /// <summary>Stable identifier used to reference this macro from a <see cref="MacroController.Core.Input.ActionType.CallMacro"/> step.</summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
     public string Name { get; set; } = "New Macro";
 
     public List<InputEvent> Steps { get; set; } = new();
+
+    /// <summary>Optional global hotkey that plays this macro when pressed, regardless of the active profile.</summary>
+    public Trigger? Shortcut { get; set; }
 
     public MacroPlayMode PlayMode { get; set; } = MacroPlayMode.NoRepeat;
 

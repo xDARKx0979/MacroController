@@ -11,19 +11,28 @@ public sealed class ProfileManager
 {
     private readonly BindingManager _bindingManager;
     private readonly List<Profile> _profiles;
+    private List<Binding> _globalBindings;
 
     public Profile ActiveProfile { get; private set; }
 
     public event EventHandler<Profile>? ActiveProfileChanged;
 
-    public ProfileManager(BindingManager bindingManager, IEnumerable<Profile> profiles)
+    public ProfileManager(BindingManager bindingManager, IEnumerable<Profile> profiles, IEnumerable<Binding>? globalBindings = null)
     {
         _bindingManager = bindingManager;
         _profiles = profiles.ToList();
+        _globalBindings = globalBindings?.ToList() ?? new();
         if (_profiles.Count == 0)
             throw new ArgumentException("At least one profile is required.", nameof(profiles));
 
         ActiveProfile = _profiles[0];
+        _bindingManager.SetBindings(EffectiveBindings(ActiveProfile));
+    }
+
+    /// <summary>Replaces the macro-shortcut bindings that apply regardless of the active profile.</summary>
+    public void SetGlobalBindings(IEnumerable<Binding> globalBindings)
+    {
+        _globalBindings = globalBindings.ToList();
         _bindingManager.SetBindings(EffectiveBindings(ActiveProfile));
     }
 
@@ -74,20 +83,22 @@ public sealed class ProfileManager
     }
 
     /// <summary>
-    /// Merges the fallback ("Default", <see cref="Profile.MatchProcessNames"/> empty) profile's
-    /// bindings underneath the given profile's bindings, so app-specific profiles only need to
-    /// define overrides/additions rather than the full binding set. Bindings on <paramref
-    /// name="profile"/> take precedence on a per-trigger basis.
+    /// Merges, in increasing order of precedence: macro-shortcut global bindings, the fallback
+    /// ("Default", <see cref="Profile.MatchProcessNames"/> empty) profile's bindings, and the
+    /// given profile's own bindings. This lets app-specific profiles define only overrides/additions,
+    /// and lets per-macro shortcuts apply everywhere unless a profile explicitly rebinds the same trigger.
     /// </summary>
     private IEnumerable<Binding> EffectiveBindings(Profile profile)
     {
-        var fallback = _profiles.FirstOrDefault(p => p.MatchProcessNames.Count == 0);
-        if (fallback is null || ReferenceEquals(fallback, profile))
-            return profile.Bindings;
-
         var merged = new Dictionary<Trigger, Binding>();
-        foreach (var binding in fallback.Bindings)
+        foreach (var binding in _globalBindings)
             merged[binding.Trigger] = binding;
+
+        var fallback = _profiles.FirstOrDefault(p => p.MatchProcessNames.Count == 0);
+        if (fallback is not null && !ReferenceEquals(fallback, profile))
+            foreach (var binding in fallback.Bindings)
+                merged[binding.Trigger] = binding;
+
         foreach (var binding in profile.Bindings)
             merged[binding.Trigger] = binding;
 

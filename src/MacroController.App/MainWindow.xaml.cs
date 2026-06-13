@@ -39,7 +39,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        _profileManager = new ProfileManager(_bindingManager, LoadProfiles());
+        _profileManager = new ProfileManager(_bindingManager, LoadProfiles(), LoadMacroShortcutBindings());
         _profileManager.ActiveProfileChanged += (_, profile) => ActiveProfileText.Text = profile.Name;
         ActiveProfileText.Text = _profileManager.ActiveProfile.Name;
 
@@ -87,6 +87,16 @@ public partial class MainWindow : Window
     private void ReloadProfiles()
     {
         _profileManager.ReplaceProfiles(LoadProfiles());
+        _profileManager.SetGlobalBindings(LoadMacroShortcutBindings());
+    }
+
+    /// <summary>Builds global bindings from every saved macro that has a <see cref="Macro.Shortcut"/> assigned.</summary>
+    private static List<Binding> LoadMacroShortcutBindings()
+    {
+        return MacroLibraryStore.LoadAll()
+            .Where(entry => entry.Macro.Shortcut is not null)
+            .Select(entry => new Binding(entry.Macro.Shortcut!.Value, new MacroAction(entry.Macro)))
+            .ToList();
     }
 
     private void ExitApplication()
@@ -226,5 +236,6 @@ public partial class MainWindow : Window
     {
         var dialog = new MacrosWindow(_recorder) { Owner = this };
         dialog.ShowDialog();
+        _profileManager.SetGlobalBindings(LoadMacroShortcutBindings());
     }
 }

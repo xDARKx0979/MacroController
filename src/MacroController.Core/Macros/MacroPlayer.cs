@@ -1,11 +1,32 @@
+using System.Diagnostics;
 using MacroController.Core.Input;
+using MacroController.Core.Storage;
 
 namespace MacroController.Core.Macros;
 
 /// <summary>Replays a recorded <see cref="Macro"/> via <see cref="InputSender"/>.</summary>
 public static class MacroPlayer
 {
-    public static async Task PlayAsync(Macro macro, CancellationToken cancellationToken = default)
+    public static Task PlayAsync(Macro macro, CancellationToken cancellationToken = default)
+        => PlayAsync(macro, cancellationToken, new HashSet<string>());
+
+    /// <summary><paramref name="visiting"/> guards against infinite recursion from <see cref="ActionType.CallMacro"/> cycles.</summary>
+    private static async Task PlayAsync(Macro macro, CancellationToken cancellationToken, HashSet<string> visiting)
+    {
+        if (!visiting.Add(macro.Id))
+            return;
+
+        try
+        {
+            await PlayStepsAsync(macro, cancellationToken, visiting);
+        }
+        finally
+        {
+            visiting.Remove(macro.Id);
+        }
+    }
+
+    private static async Task PlayStepsAsync(Macro macro, CancellationToken cancellationToken, HashSet<string> visiting)
     {
         var steps = macro.Steps;
         var random = new Random();
@@ -46,24 +67,48 @@ public static class MacroPlayer
             int delayMs = GetDelayMs(macro, step, random);
             await PrecisionDelay.WaitAsync(delayMs, cancellationToken);
 
-            switch (step.Device, step.Action)
+            switch (step.Action)
             {
-                case (InputDevice.Keyboard, ActionType.KeyDown):
+                case ActionType.Delay:
+                    // The wait already happened above; nothing else to do.
+                    break;
+                case ActionType.LaunchApp:
+                    Process.Start(new ProcessStartInfo(step.Text ?? "")
+                    {
+                        Arguments = step.Text2 ?? string.Empty,
+                        UseShellExecute = true,
+                    });
+                    break;
+                case ActionType.RunCommand:
+                    Process.Start(new ProcessStartInfo("cmd.exe", $"/c {step.Text}")
+                    {
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    });
+                    break;
+                case ActionType.TypeText:
+                    InputSender.SendText(step.Text ?? string.Empty);
+                    break;
+                case ActionType.CallMacro:
+                    if (step.Text is { } macroId && MacroLibraryStore.FindById(macroId) is { } called)
+                        await PlayAsync(called, cancellationToken, visiting);
+                    break;
+                case ActionType.KeyDown when step.Device == InputDevice.Keyboard:
                     InputSender.SendKeyDown(step.Code);
                     break;
-                case (InputDevice.Keyboard, ActionType.KeyUp):
+                case ActionType.KeyUp when step.Device == InputDevice.Keyboard:
                     InputSender.SendKeyUp(step.Code);
                     break;
-                case (InputDevice.Mouse, ActionType.MouseDown):
+                case ActionType.MouseDown when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseButtonDown((MouseButton)step.Code);
                     break;
-                case (InputDevice.Mouse, ActionType.MouseUp):
+                case ActionType.MouseUp when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseButtonUp((MouseButton)step.Code);
                     break;
-                case (InputDevice.Mouse, ActionType.Wheel):
+                case ActionType.Wheel when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseWheel(step.Code);
                     break;
-                case (InputDevice.Mouse, ActionType.HWheel):
+                case ActionType.HWheel when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseHWheel(step.Code);
                     break;
             }

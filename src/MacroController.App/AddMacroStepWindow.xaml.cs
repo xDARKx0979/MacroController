@@ -1,41 +1,90 @@
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
 using MacroController.Core.Input;
+using MacroController.Core.Macros;
+using MacroController.Core.Storage;
 using Trigger = MacroController.Core.Bindings.Trigger;
 
 namespace MacroController.App;
 
-/// <summary>Modal dialog for manually adding a key-press, mouse-click, or wheel step to a macro.</summary>
+/// <summary>
+/// Modal dialog for adding a step to a macro. The left-hand category list mirrors Razer
+/// Synapse's macro editor "Add" panel (Delay, Keyboard/Mouse Function, Macro, Launch,
+/// Run Command, Text Function, Loop); the right-hand side shows that category's settings.
+/// </summary>
 public partial class AddMacroStepWindow : Window
 {
-    private Trigger? _trigger;
+    private readonly string? _excludeMacroId;
+    private List<Macro> _macros = new();
+    private Trigger? _keyTrigger;
+    private Trigger? _mouseTrigger;
 
-    public AddMacroStepWindow()
+    public AddMacroStepWindow(string? excludeMacroId = null)
     {
         InitializeComponent();
-        StepTypeCombo.SelectedIndex = 0;
+        _excludeMacroId = excludeMacroId;
+
+        PopulateMacroCombo();
+        CategoryList.SelectedIndex = 1; // Keyboard Function
         UpdatePanels();
     }
 
     public List<InputEvent>? Result { get; private set; }
 
-    private void StepTypeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdatePanels();
+    private void PopulateMacroCombo()
+    {
+        _macros = MacroLibraryStore.LoadAll()
+            .Select(entry => entry.Macro)
+            .Where(macro => macro.Id != _excludeMacroId)
+            .ToList();
 
-    private void WheelDirectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateWheelHint();
+        MacroCombo.ItemsSource = _macros.Select(macro => macro.Name).ToList();
+        if (_macros.Count > 0)
+            MacroCombo.SelectedIndex = 0;
+
+        MacroCombo.Visibility = _macros.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        NoMacrosText.Visibility = _macros.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void CategoryList_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdatePanels();
+
+    private void MouseActionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateMouseSubPanels();
+
+    private void MouseWheelDirectionCombo_SelectionChanged(object sender, SelectionChangedEventArgs e) => UpdateWheelHint();
 
     private void UpdatePanels()
     {
-        bool isWheel = StepTypeCombo.SelectedIndex == 2;
-        bool isDoubleClick = StepTypeCombo.SelectedIndex == 3;
+        int category = CategoryList.SelectedIndex;
 
-        CapturePanel.Visibility = isWheel ? Visibility.Collapsed : Visibility.Visible;
-        WheelDirectionPanel.Visibility = isWheel ? Visibility.Visible : Visibility.Collapsed;
+        DelayBeforePanel.Visibility = category is 0 or 7 ? Visibility.Collapsed : Visibility.Visible;
+        DelayPanel.Visibility = category == 0 ? Visibility.Visible : Visibility.Collapsed;
+        KeyboardPanel.Visibility = category == 1 ? Visibility.Visible : Visibility.Collapsed;
+        MousePanel.Visibility = category == 2 ? Visibility.Visible : Visibility.Collapsed;
+        MacroPanel.Visibility = category == 3 ? Visibility.Visible : Visibility.Collapsed;
+        LaunchPanel.Visibility = category == 4 ? Visibility.Visible : Visibility.Collapsed;
+        RunCommandPanel.Visibility = category == 5 ? Visibility.Visible : Visibility.Collapsed;
+        TextFunctionPanel.Visibility = category == 6 ? Visibility.Visible : Visibility.Collapsed;
+        LoopPanel.Visibility = category == 7 ? Visibility.Visible : Visibility.Collapsed;
 
-        HoldPanel.Visibility = isWheel ? Visibility.Collapsed : Visibility.Visible;
-        WheelDeltaPanel.Visibility = isWheel ? Visibility.Visible : Visibility.Collapsed;
-        HoldLabel.Text = isDoubleClick ? "Hold per click (ms):" : "Hold (ms):";
+        if (category == 2)
+            UpdateMouseSubPanels();
+    }
 
-        ClickGapPanel.Visibility = isDoubleClick ? Visibility.Visible : Visibility.Collapsed;
+    private void UpdateMouseSubPanels()
+    {
+        if (MouseCapturePanel is null)
+            return; // fired during InitializeComponent, before later panels are wired up
+
+        int mode = MouseActionCombo.SelectedIndex; // 0 = Click, 1 = Double-Click, 2 = Wheel
+        bool isWheel = mode == 2;
+        bool isDoubleClick = mode == 1;
+
+        MouseCapturePanel.Visibility = isWheel ? Visibility.Collapsed : Visibility.Visible;
+        MouseHoldPanel.Visibility = isWheel ? Visibility.Collapsed : Visibility.Visible;
+        MouseHoldLabel.Text = isDoubleClick ? "Hold per click (ms):" : "Hold (ms):";
+        MouseGapPanel.Visibility = isDoubleClick ? Visibility.Visible : Visibility.Collapsed;
+        MouseWheelPanel.Visibility = isWheel ? Visibility.Visible : Visibility.Collapsed;
 
         if (isWheel)
             UpdateWheelHint();
@@ -43,100 +92,239 @@ public partial class AddMacroStepWindow : Window
 
     private void UpdateWheelHint()
     {
-        if (WheelHintText == null)
+        if (MouseWheelHintText == null)
             return;
 
-        WheelHintText.Text = WheelDirectionCombo.SelectedIndex == 1
+        MouseWheelHintText.Text = MouseWheelDirectionCombo.SelectedIndex == 1
             ? "(+ = right, - = left)"
             : "(+ = up, - = down)";
     }
 
-    private async void CaptureButton_Click(object sender, RoutedEventArgs e)
+    private async void KeyCaptureButton_Click(object sender, RoutedEventArgs e)
     {
-        CaptureButton.IsEnabled = false;
-        CaptureButton.Content = "Press a key or button...";
+        KeyCaptureButton.IsEnabled = false;
+        KeyCaptureButton.Content = "Press a key or button...";
 
         using var capture = new TriggerCapture();
         var trigger = await capture.Result;
 
-        CaptureButton.IsEnabled = true;
-        CaptureButton.Content = "Capture...";
+        KeyCaptureButton.IsEnabled = true;
+        KeyCaptureButton.Content = "Capture...";
 
         if (trigger is { } t)
         {
-            _trigger = t;
-            CapturedText.Text = TriggerDisplay.Describe(t);
+            _keyTrigger = t;
+            KeyCapturedText.Text = TriggerDisplay.Describe(t);
         }
+    }
+
+    private async void MouseCaptureButton_Click(object sender, RoutedEventArgs e)
+    {
+        MouseCaptureButton.IsEnabled = false;
+        MouseCaptureButton.Content = "Click a mouse button...";
+
+        using var capture = new TriggerCapture();
+        var trigger = await capture.Result;
+
+        MouseCaptureButton.IsEnabled = true;
+        MouseCaptureButton.Content = "Capture...";
+
+        if (trigger is { } t)
+        {
+            _mouseTrigger = t;
+            MouseCapturedText.Text = TriggerDisplay.Describe(t);
+        }
+    }
+
+    private void LaunchBrowseButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Filter = "Programs (*.exe)|*.exe|All files (*.*)|*.*" };
+        if (dialog.ShowDialog(this) == true)
+            LaunchPathInput.Text = dialog.FileName;
     }
 
     private void AddButton_Click(object sender, RoutedEventArgs e)
     {
-        if (!int.TryParse(DelayBeforeInput.Text, out int delayBefore) || delayBefore < 0)
-        {
-            MessageBox.Show(this, "Enter a non-negative delay.", "Invalid delay", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        int category = CategoryList.SelectedIndex;
 
-        if (StepTypeCombo.SelectedIndex == 2)
+        int delayBefore = 0;
+        if (category is not (0 or 7))
         {
-            if (!int.TryParse(WheelDeltaInput.Text, out int delta) || delta == 0)
+            if (!int.TryParse(DelayBeforeInput.Text, out delayBefore) || delayBefore < 0)
             {
-                MessageBox.Show(this, "Enter a non-zero wheel delta.", "Invalid delta", MessageBoxButton.OK, MessageBoxImage.Warning);
+                ShowError("Enter a non-negative delay.");
                 return;
             }
-
-            var wheelAction = WheelDirectionCombo.SelectedIndex == 1 ? ActionType.HWheel : ActionType.Wheel;
-            Result = new List<InputEvent> { new(InputDevice.Mouse, delta, wheelAction, delayBefore) };
-            DialogResult = true;
-            return;
         }
 
-        if (_trigger is not { } trigger)
+        switch (category)
         {
-            MessageBox.Show(this, "Capture a key or mouse button first.", "Missing input", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
+            case 0: // Delay
+                if (!int.TryParse(WaitInput.Text, out int wait) || wait < 0)
+                {
+                    ShowError("Enter a non-negative wait time.");
+                    return;
+                }
+
+                Result = new List<InputEvent> { new(InputDevice.Keyboard, 0, ActionType.Delay, wait) };
+                break;
+
+            case 1: // Keyboard Function
+                if (_keyTrigger is not { } keyTrigger)
+                {
+                    ShowError("Capture a key or button first.");
+                    return;
+                }
+
+                if (!int.TryParse(KeyHoldInput.Text, out int keyHold) || keyHold < 0)
+                {
+                    ShowError("Enter a non-negative hold duration.");
+                    return;
+                }
+
+                var (downAction, upAction) = keyTrigger.Device == InputDevice.Keyboard
+                    ? (ActionType.KeyDown, ActionType.KeyUp)
+                    : (ActionType.MouseDown, ActionType.MouseUp);
+
+                Result = new List<InputEvent>
+                {
+                    new(keyTrigger.Device, keyTrigger.Code, downAction, delayBefore),
+                    new(keyTrigger.Device, keyTrigger.Code, upAction, keyHold),
+                };
+                break;
+
+            case 2: // Mouse Function
+                var mouseSteps = BuildMouseSteps(delayBefore);
+                if (mouseSteps is null)
+                    return;
+
+                Result = mouseSteps;
+                break;
+
+            case 3: // Macro
+                if (MacroCombo.SelectedIndex < 0 || MacroCombo.SelectedIndex >= _macros.Count)
+                {
+                    ShowError("Select a macro to play.");
+                    return;
+                }
+
+                Result = new List<InputEvent>
+                {
+                    new(InputDevice.Keyboard, 0, ActionType.CallMacro, delayBefore, Text: _macros[MacroCombo.SelectedIndex].Id),
+                };
+                break;
+
+            case 4: // Launch
+                if (string.IsNullOrWhiteSpace(LaunchPathInput.Text))
+                {
+                    ShowError("Enter a path to launch.");
+                    return;
+                }
+
+                Result = new List<InputEvent>
+                {
+                    new(InputDevice.Keyboard, 0, ActionType.LaunchApp, delayBefore,
+                        Text: LaunchPathInput.Text.Trim(),
+                        Text2: string.IsNullOrWhiteSpace(LaunchArgsInput.Text) ? null : LaunchArgsInput.Text.Trim()),
+                };
+                break;
+
+            case 5: // Run Command
+                if (string.IsNullOrWhiteSpace(RunCommandInput.Text))
+                {
+                    ShowError("Enter a command to run.");
+                    return;
+                }
+
+                Result = new List<InputEvent>
+                {
+                    new(InputDevice.Keyboard, 0, ActionType.RunCommand, delayBefore, Text: RunCommandInput.Text.Trim()),
+                };
+                break;
+
+            case 6: // Text Function
+                if (string.IsNullOrEmpty(TextFunctionInput.Text))
+                {
+                    ShowError("Enter text to type.");
+                    return;
+                }
+
+                Result = new List<InputEvent>
+                {
+                    new(InputDevice.Keyboard, 0, ActionType.TypeText, delayBefore, Text: TextFunctionInput.Text),
+                };
+                break;
+
+            case 7: // Loop
+                if (!int.TryParse(LoopCountInput.Text, out int loopCount) || loopCount < 1)
+                {
+                    ShowError("Enter a repeat count of at least 1.");
+                    return;
+                }
+
+                Result = new List<InputEvent>
+                {
+                    new(InputDevice.Keyboard, loopCount, ActionType.LoopStart, 0),
+                    new(InputDevice.Keyboard, 0, ActionType.LoopEnd, 0),
+                };
+                break;
         }
 
-        if (!int.TryParse(HoldInput.Text, out int hold) || hold < 0)
-        {
-            MessageBox.Show(this, "Enter a non-negative hold duration.", "Invalid hold", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
+        DialogResult = true;
+    }
 
-        if (StepTypeCombo.SelectedIndex == 3)
+    private List<InputEvent>? BuildMouseSteps(int delayBefore)
+    {
+        int mode = MouseActionCombo.SelectedIndex; // 0 = Click, 1 = Double-Click, 2 = Wheel
+
+        if (mode == 2) // Wheel
         {
-            if (trigger.Device != InputDevice.Mouse)
+            if (!int.TryParse(MouseWheelDeltaInput.Text, out int delta) || delta == 0)
             {
-                MessageBox.Show(this, "Double-click requires a mouse button.", "Invalid input", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                ShowError("Enter a non-zero wheel delta.");
+                return null;
             }
 
-            if (!int.TryParse(ClickGapInput.Text, out int gap) || gap < 0)
+            var wheelAction = MouseWheelDirectionCombo.SelectedIndex == 1 ? ActionType.HWheel : ActionType.Wheel;
+            return new List<InputEvent> { new(InputDevice.Mouse, delta, wheelAction, delayBefore) };
+        }
+
+        if (_mouseTrigger is not { } trigger)
+        {
+            ShowError("Capture a mouse button first.");
+            return null;
+        }
+
+        if (!int.TryParse(MouseHoldInput.Text, out int hold) || hold < 0)
+        {
+            ShowError("Enter a non-negative hold duration.");
+            return null;
+        }
+
+        if (mode == 1) // Double-Click
+        {
+            if (!int.TryParse(MouseGapInput.Text, out int gap) || gap < 0)
             {
-                MessageBox.Show(this, "Enter a non-negative gap between clicks.", "Invalid gap", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                ShowError("Enter a non-negative gap between clicks.");
+                return null;
             }
 
-            Result = new List<InputEvent>
+            return new List<InputEvent>
             {
                 new(trigger.Device, trigger.Code, ActionType.MouseDown, delayBefore),
                 new(trigger.Device, trigger.Code, ActionType.MouseUp, hold),
                 new(trigger.Device, trigger.Code, ActionType.MouseDown, gap),
                 new(trigger.Device, trigger.Code, ActionType.MouseUp, hold),
             };
-            DialogResult = true;
-            return;
         }
 
-        var (downAction, upAction) = trigger.Device == InputDevice.Keyboard
-            ? (ActionType.KeyDown, ActionType.KeyUp)
-            : (ActionType.MouseDown, ActionType.MouseUp);
-
-        Result = new List<InputEvent>
+        return new List<InputEvent>
         {
-            new(trigger.Device, trigger.Code, downAction, delayBefore),
-            new(trigger.Device, trigger.Code, upAction, hold),
+            new(trigger.Device, trigger.Code, ActionType.MouseDown, delayBefore),
+            new(trigger.Device, trigger.Code, ActionType.MouseUp, hold),
         };
-        DialogResult = true;
     }
+
+    private void ShowError(string message) =>
+        MessageBox.Show(this, message, "Invalid input", MessageBoxButton.OK, MessageBoxImage.Warning);
 }

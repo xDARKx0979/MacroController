@@ -4,65 +4,196 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="Add Step" Height="300" Width="400"
+        Title="Add Step" Height="480" Width="640"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
     <Grid Margin="12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="Type:" Width="110" VerticalAlignment="Center"/>
-            <ComboBox x:Name="StepTypeCombo" Width="200" SelectionChanged="StepTypeCombo_SelectionChanged">
-                <ComboBoxItem Content="Key Press"/>
-                <ComboBoxItem Content="Mouse Click"/>
-                <ComboBoxItem Content="Mouse Wheel"/>
-                <ComboBoxItem Content="Mouse Double-Click"/>
-            </ComboBox>
-        </StackPanel>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <StackPanel x:Name="CapturePanel" Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="Key / Button:" Width="110" VerticalAlignment="Center"/>
-            <TextBlock x:Name="CapturedText" Text="(none)" Width="140" VerticalAlignment="Center"/>
-            <Button x:Name="CaptureButton" Content="Capture..." Click="CaptureButton_Click" Padding="8,2"/>
-        </StackPanel>
+            <!-- Left: Razer-style category list -->
+            <ListBox x:Name="CategoryList" Grid.Column="0" Margin="0,0,12,0" SelectionChanged="CategoryList_SelectionChanged">
+                <ListBoxItem Tag="Delay">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⏱" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="DELAY" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="Keyboard">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⌨" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="KEYBOARD FUNCTION" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="Mouse">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🖱" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="MOUSE FUNCTION" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="Macro">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="▶" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="MACRO" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="Launch">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🚀" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="LAUNCH" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="RunCommand">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="💻" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="RUN COMMAND" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="TextFunction">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="📝" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="TEXT FUNCTION" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </ListBoxItem>
+                <ListBoxItem Tag="Loop">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="🔁" Width="26" FontSize="14" HorizontalAlignment="Center"/>
+                        <TextBlock Text="LOOP" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </ListBoxItem>
+            </ListBox>
 
-        <StackPanel x:Name="WheelDirectionPanel" Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10" Visibility="Collapsed">
-            <TextBlock Text="Direction:" Width="110" VerticalAlignment="Center"/>
-            <ComboBox x:Name="WheelDirectionCombo" Width="120" SelectedIndex="0" SelectionChanged="WheelDirectionCombo_SelectionChanged">
-                <ComboBoxItem Content="Vertical"/>
-                <ComboBoxItem Content="Horizontal"/>
-            </ComboBox>
-        </StackPanel>
+            <!-- Right: config panel for the selected category -->
+            <StackPanel Grid.Column="1">
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock Text="Delay before (ms):" Width="110" VerticalAlignment="Center"/>
-            <TextBox x:Name="DelayBeforeInput" Width="100" Text="50"/>
-        </StackPanel>
+                <StackPanel x:Name="DelayBeforePanel" Orientation="Horizontal" Margin="0,0,0,14">
+                    <TextBlock Text="Delay before (ms):" Width="160" VerticalAlignment="Center"/>
+                    <TextBox x:Name="DelayBeforeInput" Width="100" Text="50"/>
+                </StackPanel>
 
-        <StackPanel x:Name="HoldPanel" Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10">
-            <TextBlock x:Name="HoldLabel" Text="Hold (ms):" Width="110" VerticalAlignment="Center"/>
-            <TextBox x:Name="HoldInput" Width="100" Text="50"/>
-        </StackPanel>
+                <!-- DELAY -->
+                <StackPanel x:Name="DelayPanel" Orientation="Horizontal" Visibility="Collapsed">
+                    <TextBlock Text="Wait (ms):" Width="160" VerticalAlignment="Center"/>
+                    <TextBox x:Name="WaitInput" Width="100" Text="500"/>
+                </StackPanel>
 
-        <StackPanel x:Name="WheelDeltaPanel" Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,10" Visibility="Collapsed">
-            <TextBlock Text="Delta:" Width="110" VerticalAlignment="Center"/>
-            <TextBox x:Name="WheelDeltaInput" Width="100" Text="120"/>
-            <TextBlock x:Name="WheelHintText" Text="(+ = up, - = down)" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
-        </StackPanel>
+                <!-- KEYBOARD FUNCTION -->
+                <StackPanel x:Name="KeyboardPanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Key / Button:" Width="160" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="KeyCapturedText" Text="(none)" Width="140" VerticalAlignment="Center"/>
+                        <Button x:Name="KeyCaptureButton" Content="Capture..." Click="KeyCaptureButton_Click" Padding="8,2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Hold (ms):" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="KeyHoldInput" Width="100" Text="50"/>
+                    </StackPanel>
+                </StackPanel>
 
-        <StackPanel x:Name="ClickGapPanel" Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,10" Visibility="Collapsed">
-            <TextBlock Text="Gap between clicks (ms):" Width="160" VerticalAlignment="Center"/>
-            <TextBox x:Name="ClickGapInput" Width="100" Text="50"/>
-        </StackPanel>
+                <!-- MOUSE FUNCTION -->
+                <StackPanel x:Name="MousePanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Action:" Width="160" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="MouseActionCombo" Width="160" SelectedIndex="0" SelectionChanged="MouseActionCombo_SelectionChanged">
+                            <ComboBoxItem Content="Click"/>
+                            <ComboBoxItem Content="Double-Click"/>
+                            <ComboBoxItem Content="Wheel"/>
+                        </ComboBox>
+                    </StackPanel>
 
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <StackPanel x:Name="MouseCapturePanel" Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Mouse Button:" Width="160" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="MouseCapturedText" Text="(none)" Width="140" VerticalAlignment="Center"/>
+                        <Button x:Name="MouseCaptureButton" Content="Capture..." Click="MouseCaptureButton_Click" Padding="8,2"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="MouseHoldPanel" Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock x:Name="MouseHoldLabel" Text="Hold (ms):" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="MouseHoldInput" Width="100" Text="50"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="MouseGapPanel" Orientation="Horizontal" Margin="0,0,0,10" Visibility="Collapsed">
+                        <TextBlock Text="Gap between clicks (ms):" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="MouseGapInput" Width="100" Text="50"/>
+                    </StackPanel>
+
+                    <StackPanel x:Name="MouseWheelPanel" Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="Direction:" Width="160" VerticalAlignment="Center"/>
+                            <ComboBox x:Name="MouseWheelDirectionCombo" Width="120" SelectedIndex="0" SelectionChanged="MouseWheelDirectionCombo_SelectionChanged">
+                                <ComboBoxItem Content="Vertical"/>
+                                <ComboBoxItem Content="Horizontal"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Delta:" Width="160" VerticalAlignment="Center"/>
+                            <TextBox x:Name="MouseWheelDeltaInput" Width="100" Text="120"/>
+                            <TextBlock x:Name="MouseWheelHintText" Text="(+ = up, - = down)" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="Gray"/>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- MACRO -->
+                <StackPanel x:Name="MacroPanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Macro to play:" Width="160" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="MacroCombo" Width="300"/>
+                    </StackPanel>
+                    <TextBlock x:Name="NoMacrosText" Text="No other macros available. Save more macros in the library first."
+                               Foreground="Gray" TextWrapping="Wrap" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <!-- LAUNCH -->
+                <StackPanel x:Name="LaunchPanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="Path:" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="LaunchPathInput" Width="280" Margin="0,0,8,0"/>
+                        <Button Content="Browse..." Click="LaunchBrowseButton_Click" Padding="8,2"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Arguments:" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="LaunchArgsInput" Width="280"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- RUN COMMAND -->
+                <StackPanel x:Name="RunCommandPanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="Command:" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="RunCommandInput" Width="300"/>
+                    </StackPanel>
+                    <TextBlock Text="Runs via cmd.exe /c — e.g. &quot;notepad.exe&quot; or &quot;echo hello&quot;"
+                               Foreground="Gray" Margin="160,0,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- TEXT FUNCTION -->
+                <StackPanel x:Name="TextFunctionPanel" Visibility="Collapsed">
+                    <TextBlock Text="Text to type:" Margin="0,0,0,6"/>
+                    <TextBox x:Name="TextFunctionInput" Height="100" AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+
+                <!-- LOOP -->
+                <StackPanel x:Name="LoopPanel" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Repeat count:" Width="160" VerticalAlignment="Center"/>
+                        <TextBox x:Name="LoopCountInput" Width="100" Text="2"/>
+                    </StackPanel>
+                    <TextBlock Text="Adds a loop around the steps you place between its start and end markers."
+                               Foreground="Gray" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
             <Button Content="Add" IsDefault="True" Click="AddButton_Click" Width="70" Margin="0,0,8,0"/>
             <Button Content="Cancel" IsCancel="True" Width="70"/>
         </StackPanel>

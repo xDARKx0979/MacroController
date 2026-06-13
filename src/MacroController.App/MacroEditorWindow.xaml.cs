@@ -6,8 +6,7 @@ using Microsoft.Win32;
 using MacroController.Core.Macros;
 using MacroController.Core.Storage;
 using ActionType = MacroController.Core.Input.ActionType;
-using InputDevice = MacroController.Core.Input.InputDevice;
-using InputEvent = MacroController.Core.Input.InputEvent;
+using Trigger = MacroController.Core.Bindings.Trigger;
 using Brushes = System.Windows.Media.Brushes;
 using Point = System.Windows.Point;
 
@@ -40,6 +39,8 @@ public partial class MacroEditorWindow : Window
     {
         NameInput.Text = _macro.Name;
         RepeatCountInput.Text = _macro.RepeatCount.ToString();
+
+        ShortcutText.Text = _macro.Shortcut is { } shortcut ? TriggerDisplay.Describe(shortcut) : "None";
 
         PlayModeCombo.SelectedIndex = (int)_macro.PlayMode;
         RepeatCountPanel.Visibility = _macro.PlayMode == MacroPlayMode.RepeatCount ? Visibility.Visible : Visibility.Collapsed;
@@ -205,18 +206,11 @@ public partial class MacroEditorWindow : Window
 
     private void AddStep()
     {
-        var dialog = new AddMacroStepWindow { Owner = this };
+        var dialog = new AddMacroStepWindow(_macro.Id) { Owner = this };
         if (dialog.ShowDialog() != true || dialog.Result is not { } newSteps)
             return;
 
         _macro.Steps.AddRange(newSteps);
-        RefreshSteps();
-    }
-
-    private void AddLoopButton_Click(object sender, RoutedEventArgs e)
-    {
-        _macro.Steps.Add(new InputEvent(InputDevice.Keyboard, 1, ActionType.LoopStart, 0));
-        _macro.Steps.Add(new InputEvent(InputDevice.Keyboard, 0, ActionType.LoopEnd, 0));
         RefreshSteps();
     }
 
@@ -304,6 +298,30 @@ public partial class MacroEditorWindow : Window
     }
 
     private void NameInput_TextChanged(object sender, TextChangedEventArgs e) => _macro.Name = NameInput.Text;
+
+    private async void CaptureShortcutButton_Click(object sender, RoutedEventArgs e)
+    {
+        CaptureShortcutButton.IsEnabled = false;
+        CaptureShortcutButton.Content = "Press a key or button...";
+
+        using var capture = new TriggerCapture();
+        var trigger = await capture.Result;
+
+        CaptureShortcutButton.IsEnabled = true;
+        CaptureShortcutButton.Content = "Capture...";
+
+        if (trigger is { } t)
+        {
+            _macro.Shortcut = t;
+            ShortcutText.Text = TriggerDisplay.Describe(t);
+        }
+    }
+
+    private void ClearShortcutButton_Click(object sender, RoutedEventArgs e)
+    {
+        _macro.Shortcut = null;
+        ShortcutText.Text = "None";
+    }
 
     private void PlayModeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -394,6 +412,7 @@ public partial class MacroEditorWindow : Window
         var loaded = MacroStore.Load(dialog.FileName);
         _macro.Name = loaded.Name;
         _macro.Steps = loaded.Steps;
+        _macro.Shortcut = loaded.Shortcut;
         _macro.PlayMode = loaded.PlayMode;
         _macro.RepeatCount = loaded.RepeatCount;
         _macro.DelayMode = loaded.DelayMode;
