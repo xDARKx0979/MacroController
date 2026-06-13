@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using MacroController.Core.Bindings;
 using MacroController.Core.Hooks;
 using MacroController.Core.Importers;
@@ -258,7 +259,10 @@ public partial class MainWindow : Window
     private void ImportButton_Click(object sender, RoutedEventArgs e)
     {
         var button = (Button)sender;
-        button.ContextMenu!.IsOpen = true;
+        var menu = button.ContextMenu!;
+        menu.PlacementTarget = button;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
     }
 
     private void FileImportMenuItem_Click(object sender, RoutedEventArgs e)
