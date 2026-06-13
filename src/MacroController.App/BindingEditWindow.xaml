@@ -1,0 +1,69 @@
+<Window x:Class="MacroController.App.BindingEditWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Edit Binding" Height="280" Width="440"
+        WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Trigger:" Width="80" VerticalAlignment="Center"/>
+            <TextBlock x:Name="TriggerText" Text="(none)" VerticalAlignment="Center" Width="220"/>
+            <Button x:Name="CaptureTriggerButton" Content="Capture..." Click="CaptureTriggerButton_Click" Padding="6,2"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+            <TextBlock Text="Action:" Width="80" VerticalAlignment="Center"/>
+            <ComboBox x:Name="ActionTypeCombo" Width="220" SelectionChanged="ActionTypeCombo_SelectionChanged">
+                <ComboBoxItem Content="Remap key"/>
+                <ComboBoxItem Content="Type text"/>
+                <ComboBoxItem Content="Launch app"/>
+                <ComboBoxItem Content="Play macro"/>
+            </ComboBox>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <StackPanel x:Name="RemapPanel" Orientation="Horizontal" Visibility="Collapsed">
+                <TextBlock Text="Target key:" Width="80" VerticalAlignment="Center"/>
+                <TextBlock x:Name="RemapTargetText" Text="(none)" VerticalAlignment="Center" Width="220"/>
+                <Button x:Name="CaptureTargetButton" Content="Capture..." Click="CaptureTargetButton_Click" Padding="6,2"/>
+            </StackPanel>
+
+            <StackPanel x:Name="TextPanel" Orientation="Horizontal" Visibility="Collapsed">
+                <TextBlock Text="Text:" Width="80" VerticalAlignment="Center"/>
+                <TextBox x:Name="TextActionInput" Width="300"/>
+            </StackPanel>
+
+            <StackPanel x:Name="LaunchPanel" Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <TextBlock Text="Path:" Width="80" VerticalAlignment="Center"/>
+                    <TextBox x:Name="LaunchPathInput" Width="260"/>
+                    <Button Content="Browse..." Click="BrowseLaunchPath_Click" Padding="6,2" Margin="4,0,0,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Arguments:" Width="80" VerticalAlignment="Center"/>
+                    <TextBox x:Name="LaunchArgsInput" Width="300"/>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel x:Name="MacroPanel" Orientation="Horizontal" Visibility="Collapsed">
+                <TextBlock Text="Macro file:" Width="80" VerticalAlignment="Center"/>
+                <TextBox x:Name="MacroPathInput" Width="260" IsReadOnly="True"/>
+                <Button Content="Browse..." Click="BrowseMacroPath_Click" Padding="6,2" Margin="4,0,0,0"/>
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="OK" IsDefault="True" Click="OkButton_Click" Width="70" Margin="0,0,8,0"/>
+            <Button Content="Cancel" IsCancel="True" Width="70"/>
+        </StackPanel>
+    </Grid>
+</Window>

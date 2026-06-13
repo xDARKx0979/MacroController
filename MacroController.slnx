@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MacroController.Core/MacroController.Core.csproj" />
+    <Project Path="src/MacroController.Spike/MacroController.Spike.csproj" />
+    <Project Path="src/MacroController.App/MacroController.App.csproj" />
+  </Folder>
+</Solution>

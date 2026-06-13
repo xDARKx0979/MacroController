@@ -1,0 +1,96 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using MacroController.Core.Native;
+
+namespace MacroController.Core.Hooks;
+
+public sealed class KeyEventArgs : EventArgs
+{
+    internal KeyEventArgs(int virtualKeyCode, int scanCode, bool isExtended)
+    {
+        VirtualKeyCode = virtualKeyCode;
+        ScanCode = scanCode;
+        IsExtended = isExtended;
+    }
+
+    public int VirtualKeyCode { get; }
+    public int ScanCode { get; }
+    public bool IsExtended { get; }
+
+    /// <summary>Set to true to swallow the key so it never reaches other apps.</summary>
+    public bool Handled { get; set; }
+}
+
+/// <summary>
+/// Wraps a low-level keyboard hook (WH_KEYBOARD_LL). The callback must stay fast and
+/// allocation-light - it runs on the thread that called <see cref="Install"/>, which
+/// must also run a Win32 message loop for the hook to receive events.
+/// </summary>
+public sealed class KeyboardHook : IDisposable
+{
+    private readonly LowLevelKeyboardProc _proc;
+    private nint _hookHandle;
+
+    public event EventHandler<KeyEventArgs>? KeyDown;
+    public event EventHandler<KeyEventArgs>? KeyUp;
+
+    public KeyboardHook()
+    {
+        // Keep a reference to the delegate so it isn't garbage-collected while the
+        // hook is installed.
+        _proc = HookCallback;
+    }
+
+    public void Install()
+    {
+        if (_hookHandle != 0)
+            return;
+
+        using var currentProcess = Process.GetCurrentProcess();
+        using var currentModule = currentProcess.MainModule!;
+        nint moduleHandle = NativeMethods.GetModuleHandle(currentModule.ModuleName);
+
+        _hookHandle = NativeMethods.SetWindowsHookEx(NativeMethods.WH_KEYBOARD_LL, _proc, moduleHandle, 0);
+        if (_hookHandle == 0)
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+    }
+
+    public void Uninstall()
+    {
+        if (_hookHandle == 0)
+            return;
+
+        NativeMethods.UnhookWindowsHookEx(_hookHandle);
+        _hookHandle = 0;
+    }
+
+    private nint HookCallback(int nCode, nint wParam, nint lParam)
+    {
+        if (nCode >= 0)
+        {
+            var data = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
+            int message = (int)wParam;
+            bool isExtended = (data.flags & NativeMethods.LLKHF_EXTENDED) != 0;
+
+            if (message == NativeMethods.WM_KEYDOWN || message == NativeMethods.WM_SYSKEYDOWN)
+            {
+                var args = new KeyEventArgs((int)data.vkCode, (int)data.scanCode, isExtended);
+                KeyDown?.Invoke(this, args);
+                if (args.Handled)
+                    return 1;
+            }
+            else if (message == NativeMethods.WM_KEYUP || message == NativeMethods.WM_SYSKEYUP)
+            {
+                var args = new KeyEventArgs((int)data.vkCode, (int)data.scanCode, isExtended);
+                KeyUp?.Invoke(this, args);
+                if (args.Handled)
+                    return 1;
+            }
+        }
+
+        return NativeMethods.CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+    }
+
+    public void Dispose() => Uninstall();
+}
