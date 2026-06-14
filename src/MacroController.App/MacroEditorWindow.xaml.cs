@@ -393,6 +393,11 @@ public partial class MacroEditorWindow : Window
         if (trigger is not { } t)
             return;
 
+        // The step list can change while waiting for input (e.g. the user dragged a
+        // step or removed one), so re-validate before indexing.
+        if (index >= _macro.Steps.Count)
+            return;
+
         var step = _macro.Steps[index];
         bool isRelease = step.Action is ActionType.KeyUp or ActionType.MouseUp;
         var newAction = t.Device == InputDevice.Keyboard
