@@ -61,7 +61,10 @@ public sealed class MacroRecorder
         int elapsedMs = (int)_stopwatch.ElapsedMilliseconds;
         _stopwatch.Restart();
 
-        if (elapsedMs > 0)
+        // Skip the delay before the very first step - that's just the time between
+        // clicking "Record" and the user's first press, not part of the macro itself.
+        // Playback should fire instantly unless the user explicitly adds a Delay step.
+        if (elapsedMs > 0 && _steps.Count > 0)
         {
             var delayStep = new InputEvent(InputDevice.Keyboard, 0, ActionType.Delay, elapsedMs);
             _steps.Add(delayStep);

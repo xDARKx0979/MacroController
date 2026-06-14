@@ -7,18 +7,38 @@ namespace MacroController.Core.Macros;
 /// <summary>Replays a recorded <see cref="Macro"/> via <see cref="InputSender"/>.</summary>
 public static class MacroPlayer
 {
-    public static Task PlayAsync(Macro macro, CancellationToken cancellationToken = default)
-        => PlayAsync(macro, cancellationToken, new HashSet<string>());
+    public static async Task PlayAsync(Macro macro, CancellationToken cancellationToken = default)
+    {
+        var heldInputs = new HashSet<(InputDevice Device, int Code)>();
+
+        try
+        {
+            await PlayAsync(macro, cancellationToken, new HashSet<string>(), heldInputs);
+        }
+        finally
+        {
+            // If playback was cancelled (or threw) between a KeyDown/MouseDown and its
+            // matching Up, release whatever's still "held" so it doesn't get stuck down
+            // at the OS level and block/skew the user's own input afterwards.
+            foreach (var (device, code) in heldInputs)
+            {
+                if (device == InputDevice.Keyboard)
+                    InputSender.SendKeyUp(code);
+                else
+                    InputSender.SendMouseButtonUp((MouseButton)code);
+            }
+        }
+    }
 
     /// <summary><paramref name="visiting"/> guards against infinite recursion from <see cref="ActionType.CallMacro"/> cycles.</summary>
-    private static async Task PlayAsync(Macro macro, CancellationToken cancellationToken, HashSet<string> visiting)
+    private static async Task PlayAsync(Macro macro, CancellationToken cancellationToken, HashSet<string> visiting, HashSet<(InputDevice Device, int Code)> heldInputs)
     {
         if (!visiting.Add(macro.Id))
             return;
 
         try
         {
-            await PlayStepsAsync(macro, cancellationToken, visiting);
+            await PlayStepsAsync(macro, cancellationToken, visiting, heldInputs);
         }
         finally
         {
@@ -26,7 +46,7 @@ public static class MacroPlayer
         }
     }
 
-    private static async Task PlayStepsAsync(Macro macro, CancellationToken cancellationToken, HashSet<string> visiting)
+    private static async Task PlayStepsAsync(Macro macro, CancellationToken cancellationToken, HashSet<string> visiting, HashSet<(InputDevice Device, int Code)> heldInputs)
     {
         var steps = macro.Steps;
         var random = new Random();
@@ -91,19 +111,23 @@ public static class MacroPlayer
                     break;
                 case ActionType.CallMacro:
                     if (step.Text is { } macroId && MacroLibraryStore.FindById(macroId) is { } called)
-                        await PlayAsync(called, cancellationToken, visiting);
+                        await PlayAsync(called, cancellationToken, visiting, heldInputs);
                     break;
                 case ActionType.KeyDown when step.Device == InputDevice.Keyboard:
                     InputSender.SendKeyDown(step.Code);
+                    heldInputs.Add((InputDevice.Keyboard, step.Code));
                     break;
                 case ActionType.KeyUp when step.Device == InputDevice.Keyboard:
                     InputSender.SendKeyUp(step.Code);
+                    heldInputs.Remove((InputDevice.Keyboard, step.Code));
                     break;
                 case ActionType.MouseDown when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseButtonDown((MouseButton)step.Code);
+                    heldInputs.Add((InputDevice.Mouse, step.Code));
                     break;
                 case ActionType.MouseUp when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseButtonUp((MouseButton)step.Code);
+                    heldInputs.Remove((InputDevice.Mouse, step.Code));
                     break;
                 case ActionType.Wheel when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseWheel(step.Code);

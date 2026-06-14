@@ -6,9 +6,16 @@ using Microsoft.Win32;
 using MacroController.Core.Macros;
 using MacroController.Core.Storage;
 using ActionType = MacroController.Core.Input.ActionType;
+using InputDevice = MacroController.Core.Input.InputDevice;
+using InputEvent = MacroController.Core.Input.InputEvent;
 using Trigger = MacroController.Core.Bindings.Trigger;
 using Brushes = System.Windows.Media.Brushes;
 using Point = System.Windows.Point;
+using TranslateTransform = System.Windows.Media.TranslateTransform;
+using DoubleAnimation = System.Windows.Media.Animation.DoubleAnimation;
+using QuadraticEase = System.Windows.Media.Animation.QuadraticEase;
+using EasingMode = System.Windows.Media.Animation.EasingMode;
+using DropShadowEffect = System.Windows.Media.Effects.DropShadowEffect;
 
 namespace MacroController.App;
 
@@ -19,6 +26,11 @@ public partial class MacroEditorWindow : Window
     private string _filePath;
     private Point _dragStart;
     private bool _dragging;
+    private int _dragSourceIndex;
+    private int _dragTargetIndex;
+    private Grid? _dragRow;
+    private double _dragRowHeight;
+    private int _contextMenuStepIndex;
 
     public MacroEditorWindow(Macro macro, string filePath, MacroRecorder recorder)
     {
@@ -27,6 +39,8 @@ public partial class MacroEditorWindow : Window
         _macro = macro;
         _recorder = recorder;
         _filePath = filePath;
+
+        PreviewMouseLeftButtonUp += Window_PreviewMouseLeftButtonUp;
 
         LoadFromMacro();
     }
@@ -80,9 +94,9 @@ public partial class MacroEditorWindow : Window
         var row = new Grid
         {
             Tag = index,
-            AllowDrop = true,
             Margin = new Thickness(0, 1, 0, 1),
             Background = Brushes.Transparent,
+            RenderTransform = new TranslateTransform(),
         };
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -196,7 +210,9 @@ public partial class MacroEditorWindow : Window
         row.Children.Add(dragHandle);
         row.Children.Add(column2);
         row.Children.Add(removeButton);
-        row.Drop += StepRow_Drop;
+
+        if (CanChangeStepInput(step))
+            row.MouseRightButtonUp += StepRow_MouseRightButtonUp;
 
         return row;
     }
@@ -259,40 +275,131 @@ public partial class MacroEditorWindow : Window
 
     private void StepRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        _dragStart = e.GetPosition(null);
+        _dragStart = e.GetPosition(StepsPanel);
         _dragging = false;
     }
 
     private void StepRow_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _dragging)
+        if (e.LeftButton != MouseButtonState.Pressed)
             return;
 
-        var current = e.GetPosition(null);
-        if (Math.Abs(current.X - _dragStart.X) < 4 && Math.Abs(current.Y - _dragStart.Y) < 4)
+        var current = e.GetPosition(StepsPanel);
+
+        if (!_dragging)
+        {
+            if (Math.Abs(current.X - _dragStart.X) < 4 && Math.Abs(current.Y - _dragStart.Y) < 4)
+                return;
+
+            var handle = (StackPanel)sender;
+            _dragSourceIndex = (int)handle.Tag!;
+            _dragTargetIndex = _dragSourceIndex;
+            _dragRow = (Grid)StepsPanel.Children[_dragSourceIndex];
+            _dragRowHeight = _dragRow.ActualHeight + _dragRow.Margin.Top + _dragRow.Margin.Bottom;
+
+            if (_dragRowHeight <= 0)
+            {
+                _dragRow = null;
+                return;
+            }
+
+            _dragging = true;
+            Panel.SetZIndex(_dragRow, 100);
+            _dragRow.Opacity = 0.85;
+            _dragRow.Effect = new DropShadowEffect { ShadowDepth = 4, BlurRadius = 12, Opacity = 0.5 };
+            _dragRow.CaptureMouse();
+        }
+
+        if (_dragRow is null)
             return;
 
-        _dragging = true;
-        var handle = (StackPanel)sender;
-        DragDrop.DoDragDrop(handle, (int)handle.Tag, DragDropEffects.Move);
-        _dragging = false;
+        double deltaY = current.Y - _dragStart.Y;
+        ((TranslateTransform)_dragRow.RenderTransform).Y = deltaY;
+
+        int newTargetIndex = Math.Clamp(_dragSourceIndex + (int)Math.Round(deltaY / _dragRowHeight), 0, _macro.Steps.Count - 1);
+        if (newTargetIndex != _dragTargetIndex)
+        {
+            _dragTargetIndex = newTargetIndex;
+            UpdateDragShifts();
+        }
     }
 
-    private void StepRow_Drop(object sender, DragEventArgs e)
+    /// <summary>Animates every non-dragged row toward the slot it would occupy if the drag completed at <see cref="_dragTargetIndex"/>.</summary>
+    private void UpdateDragShifts()
     {
-        if (!e.Data.GetDataPresent(typeof(int)))
+        for (int i = 0; i < StepsPanel.Children.Count; i++)
+        {
+            if (i == _dragSourceIndex)
+                continue;
+
+            int slot = i < _dragSourceIndex ? i : i - 1;
+            int newPosition = slot < _dragTargetIndex ? slot : slot + 1;
+            AnimateShift((Grid)StepsPanel.Children[i], (newPosition - i) * _dragRowHeight);
+        }
+    }
+
+    private static void AnimateShift(Grid row, double offsetY)
+    {
+        var animation = new DoubleAnimation(offsetY, TimeSpan.FromMilliseconds(120))
+        {
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut },
+        };
+        ((TranslateTransform)row.RenderTransform).BeginAnimation(TranslateTransform.YProperty, animation);
+    }
+
+    private void Window_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (!_dragging || _dragRow is null)
             return;
 
-        int sourceIndex = (int)e.Data.GetData(typeof(int));
-        int targetIndex = (int)((Grid)sender).Tag;
-        if (sourceIndex == targetIndex)
+        _dragRow.ReleaseMouseCapture();
+        _dragRow.ClearValue(EffectProperty);
+        _dragRow.Opacity = 1.0;
+        Panel.SetZIndex(_dragRow, 0);
+        _dragging = false;
+        _dragRow = null;
+
+        if (_dragTargetIndex != _dragSourceIndex)
+        {
+            var step = _macro.Steps[_dragSourceIndex];
+            _macro.Steps.RemoveAt(_dragSourceIndex);
+            _macro.Steps.Insert(_dragTargetIndex, step);
+        }
+
+        RefreshSteps();
+    }
+
+    /// <summary>True for steps that represent a single key/mouse-button press or release, which can be re-bound to a different input.</summary>
+    private static bool CanChangeStepInput(InputEvent step) =>
+        step.Action is ActionType.KeyDown or ActionType.KeyUp or ActionType.MouseDown or ActionType.MouseUp;
+
+    private void StepRow_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        _contextMenuStepIndex = (int)((Grid)sender).Tag!;
+        StepContextMenuPopup.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private async void ChangeStepInputMenuItem_Click(object sender, RoutedEventArgs e)
+    {
+        StepContextMenuPopup.IsOpen = false;
+
+        int index = _contextMenuStepIndex;
+        if (index < 0 || index >= _macro.Steps.Count)
             return;
 
-        var step = _macro.Steps[sourceIndex];
-        _macro.Steps.RemoveAt(sourceIndex);
-        if (targetIndex > sourceIndex)
-            targetIndex--;
-        _macro.Steps.Insert(targetIndex, step);
+        using var capture = new TriggerCapture();
+        var trigger = await capture.Result;
+        if (trigger is not { } t)
+            return;
+
+        var step = _macro.Steps[index];
+        bool isRelease = step.Action is ActionType.KeyUp or ActionType.MouseUp;
+        var newAction = t.Device == InputDevice.Keyboard
+            ? (isRelease ? ActionType.KeyUp : ActionType.KeyDown)
+            : (isRelease ? ActionType.MouseUp : ActionType.MouseDown);
+
+        _macro.Steps[index] = step with { Device = t.Device, Code = t.Code, Action = newAction };
         RefreshSteps();
     }
 

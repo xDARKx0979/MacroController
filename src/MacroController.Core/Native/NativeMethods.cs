@@ -115,6 +115,8 @@ internal static class NativeMethods
     public const int XBUTTON2 = 0x0002;
 
     public const uint LLKHF_EXTENDED = 0x01;
+    public const uint LLKHF_INJECTED = 0x10;
+    public const uint LLMHF_INJECTED = 0x01;
 
     public const uint INPUT_MOUSE = 0;
     public const uint INPUT_KEYBOARD = 1;

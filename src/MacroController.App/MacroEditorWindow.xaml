@@ -99,5 +99,14 @@
             <Button Content="Save As" Click="SaveAsButton_Click" Width="80" Margin="0,0,8,0"/>
             <Button Content="Close" IsCancel="True" Width="70"/>
         </StackPanel>
+
+        <Popup x:Name="StepContextMenuPopup" Placement="MousePoint" StaysOpen="False" AllowsTransparency="True">
+            <Border Background="{StaticResource CardBrush}" CornerRadius="6" Padding="4"
+                    BorderBrush="{StaticResource SubtleTextBrush}" BorderThickness="1">
+                <StackPanel MinWidth="160">
+                    <Button Content="Change Key/Button..." Click="ChangeStepInputMenuItem_Click" Style="{StaticResource MenuPopupButton}"/>
+                </StackPanel>
+            </Border>
+        </Popup>
     </Grid>
 </Window>
