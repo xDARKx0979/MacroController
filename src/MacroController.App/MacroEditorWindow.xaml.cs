@@ -25,7 +25,9 @@ public partial class MacroEditorWindow : Window
     private readonly MacroRecorder _recorder;
     private string _filePath;
     private Point _dragStart;
+    private bool _dragArmed;
     private bool _dragging;
+    private int _dragCandidateIndex;
     private int _dragSourceIndex;
     private int _dragTargetIndex;
     private Grid? _dragRow;
@@ -41,6 +43,7 @@ public partial class MacroEditorWindow : Window
         _filePath = filePath;
 
         PreviewMouseLeftButtonUp += Window_PreviewMouseLeftButtonUp;
+        PreviewMouseMove += Window_PreviewMouseMove;
 
         LoadFromMacro();
     }
@@ -138,7 +141,6 @@ public partial class MacroEditorWindow : Window
         dragHandle.Children.Add(icon);
         dragHandle.Children.Add(description);
         dragHandle.PreviewMouseLeftButtonDown += StepRow_PreviewMouseLeftButtonDown;
-        dragHandle.PreviewMouseMove += StepRow_PreviewMouseMove;
         Grid.SetColumn(dragHandle, 0);
         Grid.SetColumnSpan(dragHandle, 2);
 
@@ -277,11 +279,13 @@ public partial class MacroEditorWindow : Window
     {
         _dragStart = e.GetPosition(StepsPanel);
         _dragging = false;
+        _dragArmed = true;
+        _dragCandidateIndex = (int)((StackPanel)sender).Tag!;
     }
 
-    private void StepRow_PreviewMouseMove(object sender, MouseEventArgs e)
+    private void Window_PreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed)
+        if (!_dragArmed || e.LeftButton != MouseButtonState.Pressed)
             return;
 
         var current = e.GetPosition(StepsPanel);
@@ -291,8 +295,7 @@ public partial class MacroEditorWindow : Window
             if (Math.Abs(current.X - _dragStart.X) < 4 && Math.Abs(current.Y - _dragStart.Y) < 4)
                 return;
 
-            var handle = (StackPanel)sender;
-            _dragSourceIndex = (int)handle.Tag!;
+            _dragSourceIndex = _dragCandidateIndex;
             _dragTargetIndex = _dragSourceIndex;
             _dragRow = (Grid)StepsPanel.Children[_dragSourceIndex];
             _dragRowHeight = _dragRow.ActualHeight + _dragRow.Margin.Top + _dragRow.Margin.Bottom;
@@ -349,6 +352,8 @@ public partial class MacroEditorWindow : Window
 
     private void Window_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        _dragArmed = false;
+
         if (!_dragging || _dragRow is null)
             return;
 
