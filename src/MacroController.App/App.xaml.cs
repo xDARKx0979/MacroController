@@ -18,6 +18,13 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Relative paths (e.g. the "macros" folder) are resolved against this.
+        // Launching via Explorer sets it to the exe's own folder, but launching
+        // via the Run-key auto-start (see StartupManager) does not - it defaults
+        // to some other directory, which made saved macros "disappear" only on
+        // auto-launch after a reboot. Pin it explicitly so it's the same either way.
+        Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
         // Without this, launching the app while an instance is already running
         // (e.g. it auto-started and the user double-clicks the shortcut again)
         // starts a second process. That second instance can trigger an update
