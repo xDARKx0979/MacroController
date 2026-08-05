@@ -31,6 +31,28 @@ public static class VirtualGamepadSender
     /// retry - if the driver gets installed later, restarting the app picks it up.</summary>
     public static bool DriverUnavailable => _driverUnavailable;
 
+    /// <summary>
+    /// Probes whether ViGEmBus is actually installed and reachable right now, by trying
+    /// to open a throwaway client connection to it. Independent of the cached client
+    /// used for real playback - safe to call speculatively (e.g. from a startup driver
+    /// installer check) without affecting <see cref="SendGamepadDown"/>/<see cref="SendGamepadUp"/>.
+    /// This is deliberately a functional check rather than reading installer metadata
+    /// (registry uninstall entries, etc.) - those strings vary across installer
+    /// versions/types and are far less reliable than just asking the driver directly.
+    /// </summary>
+    public static bool IsDriverAvailable()
+    {
+        try
+        {
+            using var client = new ViGEmClient();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public static void SendGamepadDown(InputDevice device, int code) => SetButton(device, code, down: true);
 
     public static void SendGamepadUp(InputDevice device, int code) => SetButton(device, code, down: false);

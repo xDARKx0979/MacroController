@@ -2,24 +2,28 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using Microsoft.Win32;
+using MacroController.Core.Input;
 
 namespace MacroController.App;
 
 /// <summary>
 /// Silently (re)installs the ViGEmBus virtual-controller driver that
-/// <see cref="MacroController.Core.Input.VirtualGamepadSender"/> depends on, so users
-/// never have to find/run it themselves. Runs on every startup - cheap when the
-/// installed driver is already current (a couple of registry reads), and picks up
-/// driver updates automatically whenever an app update bundles a newer
-/// ViGEmBusSetup.exe and bumps <see cref="RequiredVersion"/> to match.
+/// <see cref="VirtualGamepadSender"/> depends on, so users never have to find/run it
+/// themselves. Runs on every startup, but is cheap and a no-op once the driver is
+/// actually reachable (<see cref="VirtualGamepadSender.IsDriverAvailable"/> is a real
+/// connection attempt, not a registry-metadata guess - installer display strings vary
+/// too much across versions/types to be worth trusting for this).
+///
+/// This can't distinguish "not installed" from "installed but an older version" -
+/// ViGEmBus doesn't expose a reliable, version-agnostic way to check that without
+/// touching the driver's .sys file directly. In practice that's fine: once the driver
+/// answers at all, we leave it alone, so a future ViGEmBusSetup.exe bump only reaches
+/// users who install fresh or explicitly re-run setup, not silently on every launch.
 /// </summary>
 internal static class DriverInstaller
 {
-    // Keep this in sync with build/vendor/ViGEmBusSetup.exe's actual version - bump
-    // both together whenever the bundled installer is updated.
-    private const string RequiredVersion = "1.22.0";
     private const string InstallerFileName = "ViGEmBusSetup.exe";
-    private const string DeclinedVersionValueName = "ViGEmBusDeclinedVersion";
+    private const string DeclinedMarkerValueName = "ViGEmBusInstallDeclined";
 
     public static void EnsureInstalledAsync() => Task.Run(EnsureInstalled);
 
@@ -27,10 +31,10 @@ internal static class DriverInstaller
     {
         try
         {
-            if (IsUpToDate())
+            if (VirtualGamepadSender.IsDriverAvailable())
                 return;
 
-            if (WasDeclinedForCurrentVersion())
+            if (WasDeclined())
                 return;
 
             string? appDir = Path.GetDirectoryName(Environment.ProcessPath);
@@ -63,50 +67,19 @@ internal static class DriverInstaller
         }
     }
 
-    private static bool IsUpToDate() =>
-        GetInstalledVersion() is { } installed && CompareVersions(installed, RequiredVersion) >= 0;
-
-    private static string? GetInstalledVersion()
-    {
-        foreach (var view in new[] { RegistryView.Registry64, RegistryView.Registry32 })
-        {
-            using var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, view);
-            using var uninstallKey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
-            if (uninstallKey is null)
-                continue;
-
-            foreach (string subKeyName in uninstallKey.GetSubKeyNames())
-            {
-                using var subKey = uninstallKey.OpenSubKey(subKeyName);
-                if (subKey?.GetValue("DisplayName") is not string displayName)
-                    continue;
-
-                if (displayName.Contains("ViGEmBus", StringComparison.OrdinalIgnoreCase))
-                    return subKey.GetValue("DisplayVersion") as string;
-            }
-        }
-
-        return null;
-    }
-
-    private static int CompareVersions(string a, string b) =>
-        Version.TryParse(a, out var va) && Version.TryParse(b, out var vb)
-            ? va.CompareTo(vb)
-            : string.CompareOrdinal(a, b);
-
     /// <summary>Avoids re-prompting UAC on every single launch after the user dismisses
-    /// it once for a given driver version. A future app update that bumps
-    /// <see cref="RequiredVersion"/> clears this (the stored value won't match the new
-    /// version), so it tries again exactly once per driver update.</summary>
-    private static bool WasDeclinedForCurrentVersion()
+    /// it once. Cleared automatically the moment <see cref="VirtualGamepadSender.IsDriverAvailable"/>
+    /// starts returning true (that check always runs first), so this only suppresses
+    /// repeat prompts for someone who's actively chosen not to install it.</summary>
+    private static bool WasDeclined()
     {
         using var key = Registry.CurrentUser.OpenSubKey(@"Software\MacroController", writable: false);
-        return key?.GetValue(DeclinedVersionValueName) as string == RequiredVersion;
+        return key?.GetValue(DeclinedMarkerValueName) is not null;
     }
 
     private static void RememberDeclined()
     {
         using var key = Registry.CurrentUser.CreateSubKey(@"Software\MacroController");
-        key.SetValue(DeclinedVersionValueName, RequiredVersion);
+        key.SetValue(DeclinedMarkerValueName, 1);
     }
 }
