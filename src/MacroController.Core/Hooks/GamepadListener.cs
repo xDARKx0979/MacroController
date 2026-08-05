@@ -10,10 +10,17 @@ public sealed class GamepadButtonEventArgs : EventArgs
 }
 
 /// <summary>
-/// Polls the Xbox/XInput controller in slot 0 and raises edge-triggered button events.
-/// Unlike <see cref="KeyboardHook"/>/<see cref="MouseHook"/>, this isn't an OS hook -
-/// there's no way to "swallow" a physical controller's state, so this only ever reports
-/// presses, it never blocks them from reaching other apps/games too.
+/// Polls a real Xbox/XInput controller and raises edge-triggered button events. Unlike
+/// <see cref="KeyboardHook"/>/<see cref="MouseHook"/>, this isn't an OS hook - there's no
+/// way to "swallow" a physical controller's state, so this only ever reports presses, it
+/// never blocks them from reaching other apps/games too.
+///
+/// Scans all 4 XInput slots rather than just slot 0, skipping whichever slot
+/// <see cref="VirtualGamepadSender"/>'s own virtual pad occupies. Without that, once a
+/// macro with Xbox steps connects the virtual controller, Windows can hand it a low slot
+/// (including 0) and this listener would start reading our own synthetic output back
+/// instead of the real controller - real button presses (including bind triggers) would
+/// then silently stop registering entirely.
 /// </summary>
 public sealed class GamepadListener : IDisposable
 {
@@ -43,6 +50,7 @@ public sealed class GamepadListener : IDisposable
     private bool _lastLeftTrigger;
     private bool _lastRightTrigger;
     private bool _dllMissing;
+    private int? _activeUserIndex;
 
     public event EventHandler<GamepadButtonEventArgs>? ButtonDown;
     public event EventHandler<GamepadButtonEventArgs>? ButtonUp;
@@ -60,11 +68,25 @@ public sealed class GamepadListener : IDisposable
         if (_dllMissing)
             return;
 
-        XINPUT_STATE state;
-        int result;
+        int? virtualSlot = VirtualGamepadSender.XboxUserIndex;
+
+        XINPUT_STATE state = default;
+        int result = 1;
+        int? foundSlot = null;
         try
         {
-            result = XInputGetState(0, out state);
+            for (uint i = 0; i < 4; i++)
+            {
+                if (virtualSlot == (int)i)
+                    continue;
+
+                result = XInputGetState(i, out state);
+                if (result == 0) // ERROR_SUCCESS - a real controller is here
+                {
+                    foundSlot = (int)i;
+                    break;
+                }
+            }
         }
         catch (DllNotFoundException)
         {
@@ -76,11 +98,27 @@ public sealed class GamepadListener : IDisposable
             return;
         }
 
-        if (result != 0) // ERROR_SUCCESS = 0; nonzero means no controller connected
+        if (foundSlot is null)
         {
+            _activeUserIndex = null;
+
+            // Uses (and then zeroes) whatever was still held from the last real
+            // controller before it went away, so genuinely-held buttons get a proper
+            // release event instead of just vanishing.
             if (_lastButtons != 0 || _lastLeftTrigger || _lastRightTrigger)
                 ReleaseAll();
             return;
+        }
+
+        if (foundSlot != _activeUserIndex)
+        {
+            // Switched to a different real-controller slot (plugged in, or Windows
+            // reassigned slots) - resync silently instead of diffing against the
+            // previous device's stale button state, which would fire bogus events.
+            _activeUserIndex = foundSlot;
+            _lastButtons = state.Gamepad.wButtons;
+            _lastLeftTrigger = state.Gamepad.bLeftTrigger >= TriggerThreshold;
+            _lastRightTrigger = state.Gamepad.bRightTrigger >= TriggerThreshold;
         }
 
         ushort buttons = state.Gamepad.wButtons;

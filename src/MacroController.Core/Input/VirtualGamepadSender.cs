@@ -32,6 +32,17 @@ public static class VirtualGamepadSender
     public static bool DriverUnavailable => _driverUnavailable;
 
     /// <summary>
+    /// The XInput slot (0-3) Windows assigned our virtual Xbox 360 pad, once connected -
+    /// null if it isn't connected. <see cref="MacroController.Core.Hooks.GamepadListener"/>
+    /// needs this to know which slot to skip when scanning for the user's real
+    /// controller - without it, if Windows happens to hand our own virtual pad slot 0,
+    /// the listener would silently start reading our synthetic (self-authored) input
+    /// back instead of the real controller, and real button presses would stop
+    /// registering entirely.
+    /// </summary>
+    public static int? XboxUserIndex => _xbox?.UserIndex;
+
+    /// <summary>
     /// Probes whether ViGEmBus is actually installed and reachable right now, by trying
     /// to open a throwaway client connection to it. Independent of the cached client
     /// used for real playback - safe to call speculatively (e.g. from a startup driver
@@ -99,10 +110,16 @@ public static class VirtualGamepadSender
         {
             var slider = button == XboxButton.LeftTrigger ? Xbox360Slider.LeftTrigger : Xbox360Slider.RightTrigger;
             pad.SetSliderValue(slider, down ? (byte)255 : (byte)0);
-            return;
+        }
+        else
+        {
+            pad.SetButtonState(MapXboxButton(button), down);
         }
 
-        pad.SetButtonState(MapXboxButton(button), down);
+        // Force the report out immediately rather than relying on AutoSubmitReport's
+        // default - a macro step's whole point is to change state right now, not
+        // whenever the next unrelated call happens to flush it.
+        pad.SubmitReport();
     }
 
     private static void SetPlayStationButton(PlayStationButton button, bool down)
@@ -113,29 +130,34 @@ public static class VirtualGamepadSender
 
         switch (button)
         {
-            case PlayStationButton.DPadUp: _dpadUp = down; UpdateDpad(pad); return;
-            case PlayStationButton.DPadDown: _dpadDown = down; UpdateDpad(pad); return;
-            case PlayStationButton.DPadLeft: _dpadLeft = down; UpdateDpad(pad); return;
-            case PlayStationButton.DPadRight: _dpadRight = down; UpdateDpad(pad); return;
+            case PlayStationButton.DPadUp: _dpadUp = down; UpdateDpad(pad); break;
+            case PlayStationButton.DPadDown: _dpadDown = down; UpdateDpad(pad); break;
+            case PlayStationButton.DPadLeft: _dpadLeft = down; UpdateDpad(pad); break;
+            case PlayStationButton.DPadRight: _dpadRight = down; UpdateDpad(pad); break;
 
             case PlayStationButton.L2:
                 pad.SetSliderValue(DualShock4Slider.LeftTrigger, down ? (byte)255 : (byte)0);
-                return;
+                break;
             case PlayStationButton.R2:
                 pad.SetSliderValue(DualShock4Slider.RightTrigger, down ? (byte)255 : (byte)0);
-                return;
+                break;
 
             case PlayStationButton.Home:
                 _psSpecialButtons = down
                     ? (byte)(_psSpecialButtons | DualShock4SpecialButton.Ps.Value)
                     : (byte)(_psSpecialButtons & ~DualShock4SpecialButton.Ps.Value);
                 pad.SetSpecialButtonsFull(_psSpecialButtons);
-                return;
+                break;
 
             default:
                 pad.SetButtonState(MapPlayStationButton(button), down);
-                return;
+                break;
         }
+
+        // Force the report out immediately rather than relying on AutoSubmitReport's
+        // default - a macro step's whole point is to change state right now, not
+        // whenever the next unrelated call happens to flush it.
+        pad.SubmitReport();
     }
 
     private static void UpdateDpad(IDualShock4Controller pad)
