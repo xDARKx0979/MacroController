@@ -53,6 +53,27 @@ public static class VirtualGamepadSender
         }
     }
 
+    /// <summary>
+    /// Pre-connects the virtual pad(s) a caller expects to use, instead of leaving that
+    /// to happen lazily on the first macro press. ViGEmBus.Connect() makes Windows
+    /// register a brand-new HID device (plays the "device connected" chime and takes a
+    /// moment to enumerate) - doing that mid-macro-playback means the macro's own first
+    /// button presses can arrive before the device is actually ready and get dropped.
+    /// Only connects the device types actually asked for, so someone who's never
+    /// recorded a controller step doesn't get a phantom Xbox/DS4 pad sitting connected
+    /// (which other games would otherwise see as an extra controller).
+    /// </summary>
+    public static void WarmUp(bool includeXbox, bool includePlayStation)
+    {
+        lock (Lock)
+        {
+            if (includeXbox)
+                EnsureXbox();
+            if (includePlayStation)
+                EnsurePlayStation();
+        }
+    }
+
     public static void SendGamepadDown(InputDevice device, int code) => SetButton(device, code, down: true);
 
     public static void SendGamepadUp(InputDevice device, int code) => SetButton(device, code, down: false);

@@ -227,9 +227,17 @@ public partial class MainWindow : Window
 
     private void RefreshList()
     {
-        MacroList.ItemsSource = MacroLibraryStore.LoadAll()
+        var macros = MacroLibraryStore.LoadAll();
+
+        MacroList.ItemsSource = macros
             .Select(entry => new MacroListItem(entry.FilePath, entry.Macro.Name, entry.Macro.Steps.Count))
             .ToList();
+
+        var steps = macros.SelectMany(entry => entry.Macro.Steps);
+        bool needsXbox = steps.Any(step => step.Device == InputDevice.Xbox);
+        bool needsPlayStation = steps.Any(step => step.Device == InputDevice.PlayStation);
+        if (needsXbox || needsPlayStation)
+            Task.Run(() => VirtualGamepadSender.WarmUp(needsXbox, needsPlayStation));
     }
 
     private void NewMacroButton_Click(object sender, RoutedEventArgs e)
