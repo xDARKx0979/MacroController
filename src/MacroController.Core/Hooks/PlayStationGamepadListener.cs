@@ -148,7 +148,21 @@ public sealed class PlayStationGamepadListener : IDisposable
         if (_directInput is null)
             return;
 
-        var devices = _directInput.GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, DeviceEnumerationFlags.AttachedOnly)
+        // This runs on a background Timer (on Start() and every ~2s after) - an
+        // unhandled exception here (e.g. a transient COM error during enumeration) is
+        // fatal to the whole process, not just this scan.
+        try
+        {
+            RefreshDevicesCore();
+        }
+        catch
+        {
+        }
+    }
+
+    private void RefreshDevicesCore()
+    {
+        var devices = _directInput!.GetDevices(SharpDX.DirectInput.DeviceType.Gamepad, DeviceEnumerationFlags.AttachedOnly)
             .Concat(_directInput.GetDevices(SharpDX.DirectInput.DeviceType.Joystick, DeviceEnumerationFlags.AttachedOnly));
 
         DeviceInstance? sonyDevice = null;

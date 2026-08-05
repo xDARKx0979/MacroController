@@ -33,14 +33,33 @@ public static class VirtualGamepadSender
 
     /// <summary>
     /// The XInput slot (0-3) Windows assigned our virtual Xbox 360 pad, once connected -
-    /// null if it isn't connected. <see cref="MacroController.Core.Hooks.GamepadListener"/>
-    /// needs this to know which slot to skip when scanning for the user's real
-    /// controller - without it, if Windows happens to hand our own virtual pad slot 0,
-    /// the listener would silently start reading our synthetic (self-authored) input
-    /// back instead of the real controller, and real button presses would stop
-    /// registering entirely.
+    /// null if it isn't connected (or its slot isn't known yet/anymore).
+    /// <see cref="MacroController.Core.Hooks.GamepadListener"/> needs this to know which
+    /// slot to skip when scanning for the user's real controller - without it, if
+    /// Windows happens to hand our own virtual pad slot 0, the listener would silently
+    /// start reading our synthetic (self-authored) input back instead of the real
+    /// controller, and real button presses would stop registering entirely.
+    ///
+    /// Reading IXbox360Controller.UserIndex throws Xbox360UserIndexNotReportedException
+    /// if Windows hasn't reported the assigned slot back yet - a real, briefly-true
+    /// state right after Connect(), not just a theoretical edge case - so this must
+    /// never let that (or anything else) escape: it's called on every poll tick of a
+    /// background Timer, where an unhandled exception is fatal to the whole process.
     /// </summary>
-    public static int? XboxUserIndex => _xbox?.UserIndex;
+    public static int? XboxUserIndex
+    {
+        get
+        {
+            try
+            {
+                return _xbox?.UserIndex;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+    }
 
     /// <summary>
     /// Probes whether ViGEmBus is actually installed and reachable right now, by trying

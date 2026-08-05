@@ -97,6 +97,13 @@ public sealed class GamepadListener : IDisposable
             _timer = null;
             return;
         }
+        catch
+        {
+            // This runs on a background Timer - an unhandled exception here is fatal to
+            // the whole process, not just this poll. Skip this tick and try again next
+            // time rather than risk that over something transient.
+            return;
+        }
 
         if (foundSlot is null)
         {
