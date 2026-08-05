@@ -138,55 +138,24 @@ class Profile {
 - This folder (`MacroControler`) is independent of any other project context —
   treat it as its own standalone repo. Init git here.
 
-## Controller support (added)
-Xbox (XInput) and PlayStation (DirectInput, Sony-vendor-filtered) controller buttons
-work as both bind triggers (fire/toggle a macro) and recordable/playable macro steps,
-following the same shape as the equivalent Dark Limiter feature
-(`Documents\Dark Source\CONTROLLER_INPUT_HANDOFF.md`).
+## Controller support — tried and removed
+Xbox (XInput) + PlayStation (DirectInput) controller binds and virtual-controller
+macro playback (via ViGEmBus) were built, shipped (v1.0.19-v1.0.23), and then fully
+removed at the user's request after real-hardware testing surfaced a fundamental
+limitation: games that lock onto a specific XInput player slot (e.g. Destiny 2) can
+end up bound to the user's real controller's slot and never see the separate virtual
+pad our macro playback drove, so macro-triggered controller input silently had no
+effect in-game. Fixing that properly requires a second driver (HidHide) to hide the
+real controller from other apps and a live passthrough+overlay engine merging real
+input with macro input on one virtual pad - a substantial follow-on feature, not
+attempted here.
 
-- `Core/Hooks/GamepadListener.cs` — polls `xinput9_1_0.dll` slot 0 at ~60Hz, edge-detected.
-- `Core/Hooks/PlayStationGamepadListener.cs` — SharpDX.DirectInput, vendor ID `0x054C`
-  only (never grabs an Xbox pad also exposed via DirectInput), L2/R2 on
-  RotationX/RotationY per SDL_GameControllerDB (not the "obvious" Z/Rz guess), POV hat
-  d-pad with ±45° windows, hot-plug rescan every ~2s.
-- `Core/Input/VirtualGamepadSender.cs` — actually presses a virtual controller during
-  macro playback (not just SendInput-style keyboard/mouse) via **ViGEmBus** + the
-  `Nefarius.ViGEm.Client` NuGet package. A virtual Xbox 360 pad and virtual DS4 pad are
-  created lazily on first use.
-
-**ViGEmBus is bundled and auto-installed.** `build/vendor/ViGEmBusSetup.exe` (the
-official, Authenticode-signed installer from github.com/nefarius/ViGEmBus, currently
-v1.22.0) ships alongside the app:
-- `installer.iss` runs it silently (`/quiet /norestart`) as a `[Run]` step during setup,
-  skipped if a ViGEmBus install is already registered (`IsViGEmBusInstalled` scans the
-  Uninstall registry keys). Since ViGEmBus is a kernel driver, its own installer's
-  manifest requests elevation itself - this triggers its own one-time UAC prompt without
-  changing our installer's `PrivilegesRequired=lowest`.
-- `App/DriverInstaller.cs` re-checks on every app startup (registry version compare
-  against a pinned `RequiredVersion` constant) and silently (re)installs if missing or
-  outdated. This is also how driver *updates* reach existing installs: bump
-  `build/vendor/ViGEmBusSetup.exe` + `DriverInstaller.RequiredVersion` together in a
-  future app release, and the auto-updater's existing file-copy flow (now including
-  `ViGEmBusSetup.exe` in `publish.ps1`'s `$updateFiles`) does the rest.
-- If the user declines the UAC prompt, `DriverInstaller` remembers that (per pinned
-  version, in `HKCU\Software\MacroController`) so it doesn't re-prompt every launch -
-  only tries again once `RequiredVersion` changes.
-- If the driver still isn't present (declined, or install failed), `VirtualGamepadSender`
-  fails closed - controller *macro output* silently does nothing, while controller *bind
-  triggers* (a controller button firing a keyboard/mouse macro) still work fine since
-  those never touch the driver.
-
-Known follow-ups, not done in this pass:
-- No UI indicator when `VirtualGamepadSender.DriverUnavailable` is true - a controller-step
-  macro just does nothing silently. Worth a toast/warning once this ships.
-- `AddMacroStepWindow`'s "Mouse Function" category's capture button doesn't filter by
-  device (pre-existing quirk, now also affects gamepad captures there) - capturing a
-  controller button while on that panel mislabels it as a mouse click.
-- Untested against real hardware/a real ViGEmBus install in this dev environment - the
-  installer script compiled and the API calls match the actual installed NuGet assembly
-  surfaces, but nobody has clicked a physical controller button through this yet.
+If this is revisited, the removed implementation (last present as of commit `b69db16`,
+reachable via `git log`) is a reasonable starting point for the binds/recording side;
+the passthrough approach above is what playback would need to actually work in
+slot-locked games.
 
 ## Status
-Controller support (Xbox + PlayStation, binds + real virtual-controller macro
-playback) shipped. Earlier milestones (core hook + SendInput spike, macro
-record/playback, bindings, profiles-less single-window UI) are done.
+Core hook + SendInput spike, macro record/playback, bindings, profiles-less
+single-window UI are done. Controller support was built and then rolled back (see
+above) - current `master` has no controller code.

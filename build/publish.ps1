@@ -59,12 +59,6 @@ finally {
 Copy-Item (Join-Path $obfDir "MacroController.App.dll") $publishDir -Force
 Copy-Item (Join-Path $obfDir "MacroController.Core.dll") $publishDir -Force
 
-# ViGEmBus (virtual controller driver, see Core/Input/VirtualGamepadSender.cs) ships
-# alongside the app so DriverInstaller.cs can (re)install it silently - both on first
-# setup (via installer.iss) and on later app auto-updates that bump ViGEmBusVersion.
-Write-Host "==> Bundling ViGEmBus driver installer" -ForegroundColor Cyan
-Copy-Item (Join-Path $buildDir "vendor\ViGEmBusSetup.exe") $publishDir -Force
-
 Write-Host "==> Building installer" -ForegroundColor Cyan
 & $iscc "/DAppVersion=$appVersion" (Join-Path $buildDir "installer.iss")
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed" }
@@ -82,10 +76,6 @@ $updateFiles = @(
     "MacroController.App.deps.json",
     "MacroController.App.runtimeconfig.json",
     "MacroController.Core.dll",
-    "Nefarius.ViGEm.Client.dll",
-    "SharpDX.dll",
-    "SharpDX.DirectInput.dll",
-    "ViGEmBusSetup.exe",
     "MacroController.Patcher.exe",
     "MacroController.Patcher.dll",
     "MacroController.Patcher.deps.json",

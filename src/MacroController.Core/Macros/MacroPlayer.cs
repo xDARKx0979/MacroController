@@ -22,19 +22,10 @@ public static class MacroPlayer
             // at the OS level and block/skew the user's own input afterwards.
             foreach (var (device, code) in heldInputs)
             {
-                switch (device)
-                {
-                    case InputDevice.Keyboard:
-                        InputSender.SendKeyUp(code);
-                        break;
-                    case InputDevice.Mouse:
-                        InputSender.SendMouseButtonUp((MouseButton)code);
-                        break;
-                    case InputDevice.Xbox:
-                    case InputDevice.PlayStation:
-                        VirtualGamepadSender.SendGamepadUp(device, code);
-                        break;
-                }
+                if (device == InputDevice.Keyboard)
+                    InputSender.SendKeyUp(code);
+                else
+                    InputSender.SendMouseButtonUp((MouseButton)code);
             }
         }
     }
@@ -143,14 +134,6 @@ public static class MacroPlayer
                     break;
                 case ActionType.HWheel when step.Device == InputDevice.Mouse:
                     InputSender.SendMouseHWheel(step.Code);
-                    break;
-                case ActionType.GamepadDown when step.Device is InputDevice.Xbox or InputDevice.PlayStation:
-                    VirtualGamepadSender.SendGamepadDown(step.Device, step.Code);
-                    heldInputs.Add((step.Device, step.Code));
-                    break;
-                case ActionType.GamepadUp when step.Device is InputDevice.Xbox or InputDevice.PlayStation:
-                    VirtualGamepadSender.SendGamepadUp(step.Device, step.Code);
-                    heldInputs.Remove((step.Device, step.Code));
                     break;
             }
 

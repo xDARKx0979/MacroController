@@ -11,8 +11,6 @@ internal static class TriggerDisplay
     {
         InputDevice.Keyboard => KeyNames.GetNameFromVirtualKey(trigger.Code),
         InputDevice.Mouse => $"Mouse {(MouseButton)trigger.Code}",
-        InputDevice.Xbox => $"Xbox {(XboxButton)trigger.Code}",
-        InputDevice.PlayStation => $"PS {(PlayStationButton)trigger.Code}",
         _ => $"{trigger.Device} {trigger.Code}",
     };
 }

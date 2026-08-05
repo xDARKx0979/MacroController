@@ -39,42 +39,4 @@ Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-; ViGEmBus (virtual controller driver - see Core/Input/VirtualGamepadSender.cs) is a
-; kernel driver and always needs admin, unlike this installer (PrivilegesRequired=lowest).
-; Its own installer has an embedded manifest that requests elevation itself, so this
-; triggers its own UAC prompt without changing our installer's privilege level. Skipped
-; entirely if a ViGEmBus install is already registered - see IsViGEmBusInstalled below.
-Filename: "{app}\ViGEmBusSetup.exe"; Parameters: "/quiet /norestart"; StatusMsg: "Installing virtual controller driver..."; Flags: waituntilterminated skipifsilent; Check: not IsViGEmBusInstalled
 Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-function IsViGEmBusInstalled(): Boolean;
-var
-  Names: TArrayOfString;
-  I: Integer;
-  DisplayName: String;
-  Views: array[0..1] of Integer;
-  V: Integer;
-begin
-  Result := False;
-  Views[0] := HKLM64;
-  Views[1] := HKLM32;
-
-  for V := 0 to 1 do
-  begin
-    if RegGetSubkeyNames(Views[V], 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall', Names) then
-    begin
-      for I := 0 to GetArrayLength(Names) - 1 do
-      begin
-        if RegQueryStringValue(Views[V], 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\' + Names[I], 'DisplayName', DisplayName) then
-        begin
-          if Pos('ViGEmBus', DisplayName) > 0 then
-          begin
-            Result := True;
-            Exit;
-          end;
-        end;
-      end;
-    end;
-  end;
-end;

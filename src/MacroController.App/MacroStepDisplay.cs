@@ -12,7 +12,6 @@ internal static class MacroStepDisplay
     {
         ActionType.KeyDown or ActionType.KeyUp => "⌨",
         ActionType.MouseDown or ActionType.MouseUp => "\U0001F5B1",
-        ActionType.GamepadDown or ActionType.GamepadUp => "🎮",
         ActionType.Wheel => "↕",
         ActionType.HWheel => "↔",
         ActionType.LoopStart or ActionType.LoopEnd => "🔁",
@@ -31,8 +30,6 @@ internal static class MacroStepDisplay
         ActionType.KeyUp => $"{KeyNames.GetNameFromVirtualKey(step.Code)} — Release",
         ActionType.MouseDown => $"{MouseButtonName(step.Code)} — Press",
         ActionType.MouseUp => $"{MouseButtonName(step.Code)} — Release",
-        ActionType.GamepadDown => $"{GamepadButtonName(step)} — Press",
-        ActionType.GamepadUp => $"{GamepadButtonName(step)} — Release",
         ActionType.Wheel => step.Code > 0 ? "Mouse Wheel — Up" : "Mouse Wheel — Down",
         ActionType.HWheel => step.Code > 0 ? "Mouse Wheel — Right" : "Mouse Wheel — Left",
         ActionType.LoopStart => $"Loop Start — repeat ×{Math.Max(1, step.Code)}",
@@ -59,12 +56,5 @@ internal static class MacroStepDisplay
         MouseButton.X1 => "Mouse Button 4",
         MouseButton.X2 => "Mouse Button 5",
         _ => "Mouse Button",
-    };
-
-    private static string GamepadButtonName(InputEvent step) => step.Device switch
-    {
-        InputDevice.Xbox => $"Xbox {(XboxButton)step.Code}",
-        InputDevice.PlayStation => $"PS {(PlayStationButton)step.Code}",
-        _ => "Gamepad Button",
     };
 }

@@ -171,12 +171,9 @@ public partial class AddMacroStepWindow : Window
                     return;
                 }
 
-                var (downAction, upAction) = keyTrigger.Device switch
-                {
-                    InputDevice.Keyboard => (ActionType.KeyDown, ActionType.KeyUp),
-                    InputDevice.Mouse => (ActionType.MouseDown, ActionType.MouseUp),
-                    _ => (ActionType.GamepadDown, ActionType.GamepadUp),
-                };
+                var (downAction, upAction) = keyTrigger.Device == InputDevice.Keyboard
+                    ? (ActionType.KeyDown, ActionType.KeyUp)
+                    : (ActionType.MouseDown, ActionType.MouseUp);
 
                 Result = new List<InputEvent>
                 {

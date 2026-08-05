@@ -19,8 +19,6 @@ public partial class MainWindow : Window
 {
     private readonly KeyboardHook _keyboardHook = new();
     private readonly MouseHook _mouseHook = new();
-    private readonly GamepadListener _gamepadListener = new();
-    private readonly PlayStationGamepadListener _playStationListener = new();
     private readonly MacroRecorder _recorder = new();
     private readonly BindingManager _bindingManager = new();
     private Forms.NotifyIcon? _trayIcon;
@@ -40,10 +38,6 @@ public partial class MainWindow : Window
 
         _keyboardHook.Install();
         _mouseHook.Install();
-        _gamepadListener.Start();
-        _playStationListener.Start();
-
-        DriverInstaller.EnsureInstalledAsync();
 
         _ = CheckForUpdatesAsync();
     }
@@ -135,9 +129,6 @@ public partial class MainWindow : Window
     {
         _keyboardHook.Dispose();
         _mouseHook.Dispose();
-        _gamepadListener.Dispose();
-        _playStationListener.Dispose();
-        VirtualGamepadSender.Shutdown();
         _trayIcon?.Dispose();
         base.OnClosed(e);
     }
@@ -189,55 +180,13 @@ public partial class MainWindow : Window
         };
 
         _mouseHook.MouseWheel += (_, e) => _recorder.RecordWheel(e.Delta, e.Horizontal);
-
-        // GamepadListener/PlayStationGamepadListener poll on a background timer thread,
-        // unlike the keyboard/mouse hooks (which run on this window's UI-thread message
-        // loop). BindingManager and MacroRecorder assume single-threaded access, so
-        // marshal onto the UI thread before touching either.
-        _gamepadListener.ButtonDown += (_, e) => Dispatcher.Invoke(() =>
-        {
-            if (_bindingManager.HandleDown(new Trigger(InputDevice.Xbox, e.Code)))
-                return;
-
-            _recorder.RecordXboxButton((XboxButton)e.Code, ActionType.GamepadDown);
-        });
-        _gamepadListener.ButtonUp += (_, e) => Dispatcher.Invoke(() =>
-        {
-            if (_bindingManager.HandleUp(new Trigger(InputDevice.Xbox, e.Code)))
-                return;
-
-            _recorder.RecordXboxButton((XboxButton)e.Code, ActionType.GamepadUp);
-        });
-
-        _playStationListener.ButtonDown += (_, e) => Dispatcher.Invoke(() =>
-        {
-            if (_bindingManager.HandleDown(new Trigger(InputDevice.PlayStation, e.Code)))
-                return;
-
-            _recorder.RecordPlayStationButton((PlayStationButton)e.Code, ActionType.GamepadDown);
-        });
-        _playStationListener.ButtonUp += (_, e) => Dispatcher.Invoke(() =>
-        {
-            if (_bindingManager.HandleUp(new Trigger(InputDevice.PlayStation, e.Code)))
-                return;
-
-            _recorder.RecordPlayStationButton((PlayStationButton)e.Code, ActionType.GamepadUp);
-        });
     }
 
     private void RefreshList()
     {
-        var macros = MacroLibraryStore.LoadAll();
-
-        MacroList.ItemsSource = macros
+        MacroList.ItemsSource = MacroLibraryStore.LoadAll()
             .Select(entry => new MacroListItem(entry.FilePath, entry.Macro.Name, entry.Macro.Steps.Count))
             .ToList();
-
-        var steps = macros.SelectMany(entry => entry.Macro.Steps);
-        bool needsXbox = steps.Any(step => step.Device == InputDevice.Xbox);
-        bool needsPlayStation = steps.Any(step => step.Device == InputDevice.PlayStation);
-        if (needsXbox || needsPlayStation)
-            Task.Run(() => VirtualGamepadSender.WarmUp(needsXbox, needsPlayStation));
     }
 
     private void NewMacroButton_Click(object sender, RoutedEventArgs e)
