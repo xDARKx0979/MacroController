@@ -56,6 +56,22 @@ public sealed class MacroRecorder
         Record(InputDevice.Mouse, delta, horizontal ? ActionType.HWheel : ActionType.Wheel);
     }
 
+    public void RecordXboxButton(XboxButton button, ActionType action)
+    {
+        if (!IsRecording)
+            return;
+
+        Record(InputDevice.Xbox, (int)button, action);
+    }
+
+    public void RecordPlayStationButton(PlayStationButton button, ActionType action)
+    {
+        if (!IsRecording)
+            return;
+
+        Record(InputDevice.PlayStation, (int)button, action);
+    }
+
     private void Record(InputDevice device, int code, ActionType action)
     {
         int elapsedMs = (int)_stopwatch.ElapsedMilliseconds;

@@ -4,6 +4,12 @@ public enum InputDevice
 {
     Keyboard,
     Mouse,
+
+    /// <summary>Code is a cast <see cref="XboxButton"/>.</summary>
+    Xbox,
+
+    /// <summary>Code is a cast <see cref="PlayStationButton"/>.</summary>
+    PlayStation,
 }
 
 public enum ActionType
@@ -14,6 +20,12 @@ public enum ActionType
     MouseUp,
     MouseMove,
     Wheel,
+
+    /// <summary>A controller button (Xbox or PlayStation - see <see cref="InputEvent.Device"/>) pressed.</summary>
+    GamepadDown,
+
+    /// <summary>A controller button (Xbox or PlayStation - see <see cref="InputEvent.Device"/>) released.</summary>
+    GamepadUp,
 
     /// <summary>Horizontal scroll. Positive = right, negative = left (120 per notch).</summary>
     HWheel,

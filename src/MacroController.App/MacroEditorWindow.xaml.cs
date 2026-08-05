@@ -376,7 +376,8 @@ public partial class MacroEditorWindow : Window
 
     /// <summary>True for steps that represent a single key/mouse-button press or release, which can be re-bound to a different input.</summary>
     private static bool CanChangeStepInput(InputEvent step) =>
-        step.Action is ActionType.KeyDown or ActionType.KeyUp or ActionType.MouseDown or ActionType.MouseUp;
+        step.Action is ActionType.KeyDown or ActionType.KeyUp or ActionType.MouseDown or ActionType.MouseUp
+            or ActionType.GamepadDown or ActionType.GamepadUp;
 
     private void StepRow_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
     {
@@ -404,10 +405,13 @@ public partial class MacroEditorWindow : Window
             return;
 
         var step = _macro.Steps[index];
-        bool isRelease = step.Action is ActionType.KeyUp or ActionType.MouseUp;
-        var newAction = t.Device == InputDevice.Keyboard
-            ? (isRelease ? ActionType.KeyUp : ActionType.KeyDown)
-            : (isRelease ? ActionType.MouseUp : ActionType.MouseDown);
+        bool isRelease = step.Action is ActionType.KeyUp or ActionType.MouseUp or ActionType.GamepadUp;
+        var newAction = t.Device switch
+        {
+            InputDevice.Keyboard => isRelease ? ActionType.KeyUp : ActionType.KeyDown,
+            InputDevice.Mouse => isRelease ? ActionType.MouseUp : ActionType.MouseDown,
+            _ => isRelease ? ActionType.GamepadUp : ActionType.GamepadDown,
+        };
 
         _macro.Steps[index] = step with { Device = t.Device, Code = t.Code, Action = newAction };
         RefreshSteps();
